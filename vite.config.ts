@@ -1,9 +1,13 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    const root = process.cwd();
     return {
       server: {
         port: 3000,
@@ -21,9 +25,12 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': path.resolve(__dirname, '.'),
-          // Explicit alias for lib/web3 to ensure Vercel resolves it correctly
-          '@/lib/web3': path.resolve(__dirname, './lib/web3.ts'),
+          '@': path.resolve(root, '.'),
+          // Explicit aliases to ensure Vercel resolves them correctly
+          '@/lib/web3': path.resolve(root, './lib/web3.ts'),
+          '@/lib': path.resolve(root, './lib'),
+          '@/services': path.resolve(root, './services'),
+          '@/components': path.resolve(root, './components'),
         },
         extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
       },
