@@ -102,6 +102,13 @@ npm run dev
 - Timestamp validation for deadlines
 - Maximum bet enforcement
 
+## Contact & Support
+
+- **Discord**: @marcusmore
+- **GitHub**: [MarcusMore](https://github.com/MarcusMore)
+
+For issues, questions, or feedback, feel free to reach out!
+
 ## License
 
 MIT
