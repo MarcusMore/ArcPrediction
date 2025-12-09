@@ -17,7 +17,7 @@ import {
   isAdmin as checkIsAdmin
 } from '../../services/contractService';
 import { Scenario } from '../../types';
-import { formatUSDC } from '../../lib/web3';
+import { formatUSDC } from '@/lib/web3';
 
 interface AdminPanelProps {
   walletAddress: string;

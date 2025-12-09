@@ -4,7 +4,7 @@ import { Trophy, DollarSign, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { GlassCard, Button, Badge } from '../ui/GlassComponents';
 import { UserBet, Scenario } from '../../types';
 import { claimWinnings } from '../../services/contractService';
-import { formatUSDC } from '../../lib/web3';
+import { formatUSDC } from '@/lib/web3';
 
 interface ClaimableBetsProps {
   bets: UserBet[];

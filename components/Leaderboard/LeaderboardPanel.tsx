@@ -4,7 +4,7 @@ import { Trophy, Medal, Crown, TrendingUp, DollarSign, Target, Zap, Users, Award
 import { GlassCard, Badge } from '../ui/GlassComponents';
 import { Scenario } from '../../types';
 import { getLeaderboard, LeaderboardEntry } from '../../services/leaderboardService';
-import { formatUSDC } from '../../lib/web3';
+import { formatUSDC } from '@/lib/web3';
 
 interface LeaderboardPanelProps {
   walletAddress: string | null;

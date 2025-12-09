@@ -15,15 +15,35 @@ export default defineConfig(({ mode }) => {
         'process.env.DEEPSEEK_API_KEY': JSON.stringify(env.DEEPSEEK_API_KEY || env.VITE_DEEPSEEK_API_KEY),
         // Also expose as import.meta.env for Vite
         'import.meta.env.VITE_DEEPSEEK_API_KEY': JSON.stringify(env.VITE_DEEPSEEK_API_KEY || env.DEEPSEEK_API_KEY),
+        // Polyfill for Node.js globals
+        global: 'globalThis',
+        'process.env': {},
       },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
-        }
+        },
+        extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
       },
       // TypeScript configuration for Vite
       esbuild: {
         target: 'es2020',
+        include: /\.tsx?$/,
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: undefined,
+          },
+        },
+        commonjsOptions: {
+          include: [/node_modules/],
+          transformMixedEsModules: true,
+        },
+      },
+      optimizeDeps: {
+        exclude: ['ethers'],
+        include: ['ethers > @ethersproject/providers'],
       },
     };
 });

@@ -21,7 +21,13 @@
     "noFallthroughCasesInSwitch": true,
     
     /* Types */
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    
+    /* Path mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
   "include": [
     "vite-env.d.ts",

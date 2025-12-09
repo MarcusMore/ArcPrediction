@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { getProvider, BETTING_PLATFORM_ABI, formatUSDC } from '../lib/web3';
+import { getProvider, BETTING_PLATFORM_ABI, formatUSDC } from '@/lib/web3';
 import { Scenario } from '../types';
 import { getContractAddress } from './contractService';
 

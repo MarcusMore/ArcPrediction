@@ -6,7 +6,7 @@ import {
   formatUSDC, 
   parseUSDC,
   USDC_DECIMALS 
-} from '../lib/web3';
+} from '@/lib/web3';
 import { Scenario, UserBet } from '../types';
 
 // Contract address - will be set after deployment

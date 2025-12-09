@@ -14,7 +14,7 @@ import { Button, GlassCard, Badge } from './components/ui/GlassComponents';
 import { MOCK_SCENARIOS, MOCK_USER, CATEGORIES, MOCK_NOTIFICATIONS, CONTRACT_ADDRESS } from './constants';
 import { Scenario, UserProfile, UserBet, ViewState, Notification } from './types';
 import { getAllScenarios, getAllUserBets, setContractAddress, isOwner, isAdmin as checkIsAdmin, claimWinnings, getMinBet, getCurrentContractAddress } from './services/contractService';
-import { getUSDCBalance, formatUSDC } from './lib/web3';
+import { getUSDCBalance, formatUSDC } from '@/lib/web3';
 import { AdminPanel } from './components/Admin/AdminPanel';
 import { Whitepaper } from './components/Whitepaper/Whitepaper';
 
