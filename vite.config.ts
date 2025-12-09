@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          // Explicit alias for lib/web3 to ensure Vercel resolves it correctly
+          '@/lib/web3': path.resolve(__dirname, './lib/web3.ts'),
         },
         extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
       },
