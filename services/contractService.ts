@@ -1,0 +1,576 @@
+import { ethers } from 'ethers';
+import { 
+  getProvider, 
+  getSigner, 
+  BETTING_PLATFORM_ABI, 
+  formatUSDC, 
+  parseUSDC,
+  USDC_DECIMALS 
+} from '../lib/web3';
+import { Scenario, UserBet } from '../types';
+
+// Contract address - will be set after deployment
+let CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '';
+
+export function setContractAddress(address: string) {
+  // Normalize address when setting it
+  CONTRACT_ADDRESS = normalizeAddress(address);
+}
+
+export function getContractAddress(): string {
+  return CONTRACT_ADDRESS;
+}
+
+/**
+ * Validate and normalize address
+ */
+function normalizeAddress(address: string): string {
+  if (!address) {
+    throw new Error('Address is required');
+  }
+  // Remove any whitespace
+  address = address.trim();
+  // Ensure it starts with 0x
+  if (!address.startsWith('0x')) {
+    address = '0x' + address;
+  }
+  // Validate it's a valid hex address (42 characters including 0x)
+  if (address.length !== 42) {
+    throw new Error(`Invalid address length: ${address.length}. Expected 42 characters.`);
+  }
+  // Validate hex format
+  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    throw new Error(`Invalid address format: ${address}`);
+  }
+  return address;
+}
+
+/**
+ * Get contract instance (read-only)
+ */
+function getContract(): ethers.Contract {
+  if (!CONTRACT_ADDRESS) {
+    throw new Error('Contract address not set. Please deploy the contract first.');
+  }
+  
+  // Normalize and validate address
+  const normalizedAddress = normalizeAddress(CONTRACT_ADDRESS);
+  
+  try {
+    const provider = getProvider();
+    // Use getAddress to ensure it's treated as an address, not a name
+    const address = ethers.getAddress(normalizedAddress);
+    return new ethers.Contract(address, BETTING_PLATFORM_ABI, provider);
+  } catch (error: any) {
+    // Suppress ENS/name resolution errors
+    if (
+      error.code === 'UNSUPPORTED_OPERATION' || 
+      error.code === 'UNCONFIGURED_NAME' ||
+      error.operation === 'getEnsAddress' ||
+      error.message?.includes('unconfigured name')
+    ) {
+      // Retry with normalized address
+      const provider = getProvider();
+      const address = ethers.getAddress(normalizedAddress);
+      return new ethers.Contract(address, BETTING_PLATFORM_ABI, provider);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get contract instance with signer (for transactions)
+ */
+async function getContractWithSigner(): Promise<ethers.Contract> {
+  if (!CONTRACT_ADDRESS) {
+    throw new Error('Contract address not set. Please deploy the contract first.');
+  }
+  
+  // Normalize and validate address
+  const normalizedAddress = normalizeAddress(CONTRACT_ADDRESS);
+  
+  try {
+    const signer = await getSigner();
+    // Use getAddress to ensure it's treated as an address, not a name
+    const address = ethers.getAddress(normalizedAddress);
+    return new ethers.Contract(address, BETTING_PLATFORM_ABI, signer);
+  } catch (error: any) {
+    // Suppress ENS/name resolution errors
+    if (
+      error.code === 'UNSUPPORTED_OPERATION' || 
+      error.code === 'UNCONFIGURED_NAME' ||
+      error.operation === 'getEnsAddress' ||
+      error.message?.includes('unconfigured name')
+    ) {
+      // Retry with normalized address
+      const signer = await getSigner();
+      const address = ethers.getAddress(normalizedAddress);
+      return new ethers.Contract(address, BETTING_PLATFORM_ABI, signer);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Convert contract scenario to frontend Scenario type
+ */
+async function convertScenario(
+  contractData: any,
+  id: string,
+  contract?: ethers.Contract
+): Promise<Scenario> {
+  const [
+    _id,
+    description,
+    createdAt,
+    bettingDeadline,
+    resolutionDeadline,
+    totalPool,
+    yesPool,
+    noPool,
+    isResolved,
+    outcome,
+    adminFee,
+    feeClaimed,
+    isClosed,
+  ] = contractData;
+
+  const totalPoolNum = Number(formatUSDC(totalPool));
+  const yesPoolNum = Number(formatUSDC(yesPool));
+  const noPoolNum = Number(formatUSDC(noPool));
+  
+  // Calculate yes price (0.0 to 1.0)
+  const yesPrice = totalPoolNum > 0 ? yesPoolNum / totalPoolNum : 0.5;
+
+  // Convert timestamps to dates
+  const endDate = new Date(Number(bettingDeadline) * 1000).toISOString().split('T')[0];
+
+  // Determine category based on description keywords
+  let category: 'Finance' | 'Sports' | 'Politics' | 'Crypto' = 'Finance';
+  const descLower = description.toLowerCase();
+  if (descLower.includes('bitcoin') || descLower.includes('ethereum') || descLower.includes('crypto') || descLower.includes('exchange')) {
+    category = 'Crypto';
+  } else if (descLower.includes('lakers') || descLower.includes('nba') || descLower.includes('championship') || descLower.includes('sport')) {
+    category = 'Sports';
+  } else if (descLower.includes('congress') || descLower.includes('regulate') || descLower.includes('government')) {
+    category = 'Politics';
+  }
+
+  // Get bettor counts if contract is provided
+  // Note: This is optimized to only count if there are bettors (to avoid unnecessary calls)
+  let yesBettors = 0;
+  let noBettors = 0;
+  let totalBettors = 0;
+  if (contract && totalPoolNum > 0) {
+    try {
+      const bettors = await contract.scenarioBettors(id);
+      totalBettors = bettors.length;
+      
+      // Only count if there are bettors (optimization)
+      if (totalBettors > 0 && totalBettors <= 100) { // Limit to 100 bettors to avoid timeout
+        // Count bettors by checking their bets (batch in parallel for better performance)
+        const betPromises = bettors.slice(0, 100).map(async (bettor: string) => {
+          try {
+            const bet = await contract.getUserBet(bettor, id);
+            return bet[1] > 0n ? bet[2] : null; // Return choice if bet exists, null otherwise
+          } catch (e) {
+            return null;
+          }
+        });
+        
+        const betResults = await Promise.all(betPromises);
+        betResults.forEach((choice) => {
+          if (choice === true) yesBettors++;
+          else if (choice === false) noBettors++;
+        });
+      } else if (totalBettors > 100) {
+        // Too many bettors, just set total
+        totalBettors = bettors.length;
+      }
+    } catch (error) {
+      // If scenarioBettors doesn't exist or fails, just use 0
+      // This is expected for older contracts without this mapping
+    }
+  }
+
+  return {
+    id,
+    title: description.split('?')[0] + '?', // Extract title from description
+    category,
+    description,
+    endDate,
+    totalVolume: totalPoolNum,
+    yesPool: yesPoolNum,
+    noPool: noPoolNum,
+    yesPrice,
+    isTrending: totalPoolNum > 100000, // Trending if volume > 100k
+    history: [], // Can be populated from events if needed
+    // Add contract-specific fields
+    isResolved,
+    isClosed,
+    outcome: isResolved ? outcome : undefined,
+    adminFee: Number(formatUSDC(adminFee)),
+    feeClaimed,
+    // Store actual timestamps for proper deadline checking
+    bettingDeadline: Number(bettingDeadline),
+    resolutionDeadline: Number(resolutionDeadline),
+    // Bettor counts
+    yesBettors,
+    noBettors,
+    totalBettors,
+    // Closed timestamp (use betting deadline if closed, or undefined)
+    closedAt: isClosed ? Number(bettingDeadline) : undefined,
+  };
+}
+
+/**
+ * Get all scenarios
+ */
+export async function getAllScenarios(): Promise<Scenario[]> {
+  const contract = getContract();
+  const count = await contract.getScenarioCount();
+  const scenarios: Scenario[] = [];
+
+  for (let i = 1; i <= Number(count); i++) {
+    try {
+      const scenarioData = await contract.getScenario(i);
+      try {
+        scenarios.push(await convertScenario(scenarioData, i.toString(), contract));
+      } catch (convertError) {
+        // If convertScenario fails (e.g., bettor counting), try without contract for bettors
+        console.warn(`Error converting scenario ${i}, trying without bettor data:`, convertError);
+        try {
+          scenarios.push(await convertScenario(scenarioData, i.toString()));
+        } catch (fallbackError) {
+          console.error(`Error converting scenario ${i} (fallback):`, fallbackError);
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching scenario ${i}:`, error);
+    }
+  }
+
+  return scenarios;
+}
+
+/**
+ * Get a specific scenario
+ */
+export async function getScenario(scenarioId: number): Promise<Scenario | null> {
+  try {
+    const contract = getContract();
+    const scenarioData = await contract.getScenario(scenarioId);
+    try {
+      return await convertScenario(scenarioData, scenarioId.toString(), contract);
+    } catch (convertError) {
+      // If convertScenario fails, try without contract for bettors
+      console.warn(`Error converting scenario ${scenarioId}, trying without bettor data:`, convertError);
+      return await convertScenario(scenarioData, scenarioId.toString());
+    }
+  } catch (error) {
+    console.error(`Error fetching scenario ${scenarioId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get user bet for a scenario
+ */
+export async function getUserBet(
+  userAddress: string,
+  scenarioId: number
+): Promise<UserBet | null> {
+  try {
+    const contract = getContract();
+    const betData = await contract.getUserBet(userAddress, scenarioId);
+    const [id, amount, choice, claimed] = betData;
+
+    if (Number(amount) === 0) {
+      return null;
+    }
+
+    // Get scenario to check if resolved and calculate winnings
+    let canClaim = false;
+    let winnings = 0;
+    try {
+      const scenarioData = await contract.getScenario(scenarioId);
+      const [
+        _id, description, createdAt, bettingDeadline, resolutionDeadline,
+        totalPool, yesPool, noPool, isResolved, outcome, adminFee, feeClaimed, isClosed
+      ] = scenarioData;
+
+      if (isResolved && !claimed) {
+        // Check if user won
+        const userWon = (choice && outcome) || (!choice && !outcome);
+        if (userWon) {
+          canClaim = true;
+          // Calculate winnings: (betAmount / winningPool) * (totalPool - adminFee)
+          // All values from contract are in USDC wei (6 decimals, as BigInt)
+          const winningPool = outcome ? yesPool : noPool;
+          if (winningPool > 0n) {
+            // Calculate using BigInt for precision: (betAmount * (totalPool - adminFee)) / winningPool
+            const adjustedPool = totalPool - adminFee;
+            const winningsWei = (amount * adjustedPool) / winningPool;
+            // Convert from wei to USDC using formatUSDC
+            winnings = Number(formatUSDC(winningsWei));
+          }
+        }
+      }
+    } catch (error) {
+      // Scenario might not exist, that's okay
+      console.error(`Error fetching scenario for bet calculation:`, error);
+    }
+
+    return {
+      id: `${scenarioId}-${userAddress}`,
+      scenarioId: scenarioId.toString(),
+      amount: Number(formatUSDC(amount)),
+      position: choice ? 'YES' : 'NO',
+      timestamp: Date.now(), // Can be fetched from events if needed
+      entryPrice: 0, // Can be calculated from scenario data
+      currentValue: Number(formatUSDC(amount)), // Will be updated when resolved
+      claimed: claimed,
+      canClaim: canClaim,
+      winnings: winnings > 0 ? winnings : undefined,
+    };
+  } catch (error) {
+    console.error(`Error fetching user bet:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get all user bets across all scenarios
+ */
+export async function getAllUserBets(userAddress: string): Promise<UserBet[]> {
+  const contract = getContract();
+  const count = await contract.getScenarioCount();
+  const bets: UserBet[] = [];
+
+  for (let i = 1; i <= Number(count); i++) {
+    try {
+      const bet = await getUserBet(userAddress, i);
+      if (bet) {
+        bets.push(bet);
+      }
+    } catch (error) {
+      // Scenario might not exist or user has no bet
+    }
+  }
+
+  return bets;
+}
+
+/**
+ * Place a bet on a scenario
+ */
+export async function placeBet(
+  scenarioId: number,
+  amount: number,
+  choice: boolean
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = await getContractWithSigner();
+  const amountWei = parseUSDC(amount.toString());
+  
+  return await contract.placeBet(scenarioId, amountWei, choice);
+}
+
+/**
+ * Claim winnings from a resolved scenario
+ */
+export async function claimWinnings(
+  scenarioId: number
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = await getContractWithSigner();
+  return await contract.claimWinnings(scenarioId);
+}
+
+/**
+ * Create a new scenario (admin only)
+ */
+export async function createScenario(
+  description: string,
+  bettingDeadline: number, // Unix timestamp
+  resolutionDeadline: number // Unix timestamp
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = await getContractWithSigner();
+  return await contract.createScenario(description, bettingDeadline, resolutionDeadline);
+}
+
+/**
+ * Resolve a scenario (admin only)
+ */
+export async function resolveScenario(
+  scenarioId: number,
+  outcome: boolean
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = await getContractWithSigner();
+  return await contract.resolveScenario(scenarioId, outcome);
+}
+
+/**
+ * Emergency resolve a scenario after resolution deadline (admin only)
+ * This bypasses the resolution deadline check
+ */
+export async function emergencyResolve(
+  scenarioId: number,
+  outcome: boolean
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = await getContractWithSigner();
+  return await contract.emergencyResolve(scenarioId, outcome);
+}
+
+/**
+ * Close betting for a scenario (admin only)
+ */
+export async function closeBetting(
+  scenarioId: number
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = await getContractWithSigner();
+  return await contract.closeBetting(scenarioId);
+}
+
+/**
+ * Claim admin fee (admin only)
+ */
+export async function claimAdminFee(
+  scenarioId: number
+): Promise<ethers.ContractTransactionResponse> {
+  const contract = await getContractWithSigner();
+  return await contract.claimAdminFee(scenarioId);
+}
+
+/**
+ * Check if an address is the contract owner
+ */
+export async function isOwner(address: string): Promise<boolean> {
+  try {
+    const contract = getContract();
+    const owner = await contract.owner();
+    return owner.toLowerCase() === address.toLowerCase();
+  } catch (error) {
+    console.error('Error checking owner:', error);
+    return false;
+  }
+}
+
+/**
+ * Get the contract owner address
+ */
+export async function getContractOwner(): Promise<string> {
+  try {
+    const contract = getContract();
+    const owner = await contract.owner();
+    return owner;
+  } catch (error) {
+    console.error('Error getting owner:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add an admin address (owner only)
+ */
+export async function addAdmin(adminAddress: string): Promise<ethers.ContractTransactionResponse> {
+  try {
+    const contract = await getContractWithSigner();
+    return await contract.addAdmin(adminAddress);
+  } catch (error) {
+    console.error('Error adding admin:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove an admin address (owner only)
+ */
+export async function removeAdmin(adminAddress: string): Promise<ethers.ContractTransactionResponse> {
+  try {
+    const contract = await getContractWithSigner();
+    return await contract.removeAdmin(adminAddress);
+  } catch (error) {
+    console.error('Error removing admin:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all admin addresses (including owner)
+ */
+export async function getAllAdmins(): Promise<string[]> {
+  try {
+    const contract = getContract();
+    const admins = await contract.getAllAdmins();
+    return admins;
+  } catch (error) {
+    console.error('Error getting admins:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if an address is admin (owner is always admin)
+ */
+export async function isAdmin(address: string): Promise<boolean> {
+  try {
+    const contract = getContract();
+    const contractAddress = getContractAddress();
+    
+    console.log('[isAdmin] Checking admin status for:', address);
+    console.log('[isAdmin] Using contract address:', contractAddress);
+    
+    // First check if address is the owner (owner should always have admin access)
+    const owner = await contract.owner();
+    console.log('[isAdmin] Contract owner:', owner);
+    
+    if (owner.toLowerCase() === address.toLowerCase()) {
+      console.log('[isAdmin] ✅ Address is the owner - granting admin access');
+      return true;
+    }
+    
+    // Check if address has ADMIN_ROLE
+    try {
+      const hasAdminRole = await contract.isAdmin(address);
+      console.log('[isAdmin] Has ADMIN_ROLE:', hasAdminRole);
+      if (hasAdminRole) {
+        return true;
+      }
+    } catch (roleError: any) {
+      console.warn('[isAdmin] Error checking ADMIN_ROLE (contract may not support it):', roleError.message);
+      // If isAdmin function doesn't exist (old contract), just rely on owner check
+    }
+    
+    console.log('[isAdmin] ❌ Address is not owner and does not have ADMIN_ROLE');
+    return false;
+  } catch (error: any) {
+    console.error('[isAdmin] Error checking admin status:', error);
+    console.error('[isAdmin] Error details:', {
+      message: error?.message,
+      code: error?.code,
+      data: error?.data
+    });
+    return false;
+  }
+}
+
+/**
+ * Get the minimum bet amount from the contract (for debugging)
+ */
+export async function getMinBet(): Promise<number> {
+  try {
+    const contract = getContract();
+    const minBetWei = await contract.MIN_BET();
+    return Number(formatUSDC(minBetWei));
+  } catch (error) {
+    console.error('Error getting MIN_BET:', error);
+    return 0;
+  }
+}
+
+/**
+ * Get the contract address being used (for debugging)
+ */
+export function getCurrentContractAddress(): string {
+  return getContractAddress();
+}
+
