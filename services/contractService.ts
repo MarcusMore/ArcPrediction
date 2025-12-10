@@ -473,11 +473,22 @@ export async function getContractOwner(): Promise<string> {
  */
 export async function addAdmin(adminAddress: string): Promise<ethers.ContractTransactionResponse> {
   try {
+    // Normalize address before calling
+    const normalizedAddress = normalizeAddress(adminAddress);
     const contract = await getContractWithSigner();
-    return await contract.addAdmin(adminAddress);
-  } catch (error) {
+    return await contract.addAdmin(normalizedAddress);
+  } catch (error: any) {
     console.error('Error adding admin:', error);
-    throw error;
+    // Re-throw with better error message if possible
+    if (error.reason) {
+      throw new Error(error.reason);
+    } else if (error.data?.message) {
+      throw new Error(error.data.message);
+    } else if (error.message) {
+      throw error;
+    } else {
+      throw new Error('Failed to add admin. Please check console for details.');
+    }
   }
 }
 

@@ -94,18 +94,58 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ walletAddress }) => {
     } catch (error: any) {
       console.error('Error adding admin:', error);
       let errorMessage = 'Failed to add admin.';
+      
+      // Handle user rejection
+      if (error.code === 4001 || error.message?.includes('user rejected') || error.message?.includes('User denied')) {
+        setIsAddingAdmin(false);
+        return;
+      }
+      
+      // Try to extract error message from various error formats
       if (error.reason) {
         errorMessage = error.reason;
+      } else if (error.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error.data?.data) {
+        // Try to decode revert reason from error data
+        try {
+          const revertReason = error.data.data;
+          if (typeof revertReason === 'string') {
+            errorMessage = revertReason;
+          } else if (revertReason?.message) {
+            errorMessage = revertReason.message;
+          }
+        } catch (e) {
+          console.error('Error parsing error data:', e);
+        }
       } else if (error.message) {
         const msg = error.message;
         if (msg.includes('user rejected') || msg.includes('User denied')) {
+          setIsAddingAdmin(false);
           return;
         }
+        // Try to extract revert reason from message
         const revertMatch = msg.match(/revert(ed)?\s+"?([^"]+)"?/i);
         if (revertMatch && revertMatch[2]) {
           errorMessage = revertMatch[2];
+        } else if (msg.includes('execution reverted')) {
+          // Try to extract custom error
+          const customErrorMatch = msg.match(/execution reverted:\s*"?([^"]+)"?/i);
+          if (customErrorMatch && customErrorMatch[1]) {
+            errorMessage = customErrorMatch[1];
+          } else {
+            errorMessage = 'Transaction reverted. Check console for details.';
+          }
+        } else {
+          errorMessage = msg;
         }
       }
+      
+      // Truncate very long error messages
+      if (errorMessage.length > 200) {
+        errorMessage = errorMessage.substring(0, 200) + '...';
+      }
+      
       alert(`❌ ${errorMessage}`);
     } finally {
       setIsAddingAdmin(false);
