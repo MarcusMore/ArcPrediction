@@ -518,7 +518,7 @@ const App: React.FC = () => {
     if (!selectedScenario || !walletAddress) return;
 
     try {
-      const { placeBet, approveUSDC, getUSDCAllowance, parseUSDC } = await import('./lib/web3');
+      const { placeBet, approveUSDC, getUSDCAllowance, parseUSDC } = await import('@/lib/web3');
       const { getContractAddress, getScenario } = await import('./services/contractService');
       
       const contractAddress = getContractAddress();
@@ -543,7 +543,7 @@ const App: React.FC = () => {
 
       // Debug: Check contract MIN_BET
       const { getMinBet } = await import('./services/contractService');
-      const { formatUSDC } = await import('./lib/web3');
+      const { formatUSDC } = await import('@/lib/web3');
       const minBet = await getMinBet();
       console.log('🔍 Debug Bet Info:');
       console.log('  Contract Address:', contractAddress);

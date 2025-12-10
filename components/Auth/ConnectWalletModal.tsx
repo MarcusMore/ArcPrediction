@@ -18,7 +18,7 @@ export const ConnectWalletModal: React.FC<ConnectWalletModalProps> = ({ isOpen, 
     setIsProcessing(true);
     try {
       // Import web3 utilities dynamically to avoid SSR issues
-      const { connectWallet } = await import('../../lib/web3');
+      const { connectWallet } = await import('@/lib/web3');
       const address = await connectWallet();
       setConnectedAddress(address);
       setIsProcessing(false);
