@@ -236,9 +236,16 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Load scenarios from contract
+  // Load scenarios from contract (or use mock data in demo mode)
   useEffect(() => {
     const loadScenarios = async () => {
+      // In demo mode, use mock scenarios
+      if (isDemoMode && !isLoggedIn) {
+        console.log('🎮 Demo mode: Using mock scenarios');
+        setScenarios(MOCK_SCENARIOS);
+        return;
+      }
+
       if (!CONTRACT_ADDRESS) {
         // No contract address - show empty state
         console.warn('⚠️ CONTRACT_ADDRESS not set. Please update .env file with VITE_CONTRACT_ADDRESS');
@@ -262,10 +269,12 @@ const App: React.FC = () => {
     };
 
     loadScenarios();
-    // Refresh scenarios every 30 seconds
-    const interval = setInterval(loadScenarios, 30000);
-    return () => clearInterval(interval);
-  }, [CONTRACT_ADDRESS]); // Re-run when contract address changes
+    // Refresh scenarios every 30 seconds (only if not in demo mode)
+    if (!isDemoMode || isLoggedIn) {
+      const interval = setInterval(loadScenarios, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [CONTRACT_ADDRESS, isDemoMode, isLoggedIn]); // Re-run when contract address, demo mode, or login status changes
 
   // Check admin status when wallet connects
   useEffect(() => {
@@ -813,6 +822,8 @@ const App: React.FC = () => {
               onConnect={() => setConnectModalOpen(true)} 
               onViewDemo={() => {
                 setIsDemoMode(true);
+                setUser(MOCK_USER);
+                setUserBets(INITIAL_BETS);
                 setView('DASHBOARD');
               }}
             />
