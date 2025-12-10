@@ -112,6 +112,59 @@ async function getContractWithSigner(): Promise<ethers.Contract> {
 }
 
 /**
+ * Retry a function with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      // Check if it's a rate limit error
+      if (error?.code === -32603 || error?.message?.includes('rate limit') || error?.message?.includes('rate limited')) {
+        const delay = initialDelay * Math.pow(2, i);
+        console.warn(`Rate limited, retrying in ${delay}ms... (attempt ${i + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      // For other errors, throw immediately
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Process array in batches with delay between batches
+ */
+async function processInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  processor: (item: T) => Promise<R>,
+  delayBetweenBatches: number = 200
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(item => retryWithBackoff(() => processor(item)))
+    );
+    results.push(...batchResults);
+    
+    // Add delay between batches (except for the last one)
+    if (i + batchSize < items.length) {
+      await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+    }
+  }
+  return results;
+}
+
+/**
  * Get bettor counts from BetPlaced events (fallback method)
  */
 async function getBettorsFromEvents(
@@ -126,10 +179,10 @@ async function getBettorsFromEvents(
     const filter = contract.filters.BetPlaced(null, scenarioId);
     
     // Query events from the contract deployment (or last 10000 blocks if too old)
-    const currentBlock = await provider.getBlockNumber();
+    const currentBlock = await retryWithBackoff(() => provider.getBlockNumber());
     const fromBlock = Math.max(0, currentBlock - 10000); // Last 10000 blocks
     
-    const events = await contract.queryFilter(filter, fromBlock, 'latest');
+    const events = await retryWithBackoff(() => contract.queryFilter(filter, fromBlock, 'latest'));
     
     // Count unique bettors and their choices
     // Note: If a bettor placed multiple bets, we count them once but use their latest choice
@@ -233,33 +286,42 @@ async function convertScenario(
       } else {
         // First, try to get bettors from the mapping
         try {
-          const bettors = await contract.scenarioBettors(scenarioIdNum);
+          const bettors = await retryWithBackoff(() => contract.scenarioBettors(scenarioIdNum));
           totalBettors = bettors && Array.isArray(bettors) ? bettors.length : 0;
           
           // Only count if there are bettors (optimization)
-          if (totalBettors > 0 && totalBettors <= 100) { // Limit to 100 bettors to avoid timeout
-            // Count bettors by checking their bets (batch in parallel for better performance)
-            const betPromises = bettors.slice(0, 100).map(async (bettor: string) => {
-              try {
-                const bet = await contract.getUserBet(bettor, scenarioIdNum);
-                return bet[1] > 0n ? bet[2] : null; // Return choice if bet exists, null otherwise
-              } catch (e) {
-                return null;
-              }
-            });
+          if (totalBettors > 0 && totalBettors <= 50) { // Reduced limit to avoid rate limiting
+            // Process bettors in small batches with delays to avoid rate limiting
+            const betResults = await processInBatches(
+              bettors.slice(0, 50),
+              5, // Process 5 at a time
+              async (bettor: string) => {
+                try {
+                  const bet = await retryWithBackoff(() => contract.getUserBet(bettor, scenarioIdNum));
+                  return bet[1] > 0n ? bet[2] : null; // Return choice if bet exists, null otherwise
+                } catch (e) {
+                  return null;
+                }
+              },
+              300 // 300ms delay between batches
+            );
             
-            const betResults = await Promise.all(betPromises);
             betResults.forEach((choice) => {
               if (choice === true) yesBettors++;
               else if (choice === false) noBettors++;
             });
-          } else if (totalBettors > 100) {
-            // Too many bettors, just set total
+          } else if (totalBettors > 50) {
+            // Too many bettors, just set total (skip detailed counting to avoid rate limits)
             totalBettors = bettors.length;
           }
-        } catch (mappingError) {
+        } catch (mappingError: any) {
           // Mapping failed, will try events
-          console.warn(`scenarioBettors mapping failed for scenario ${scenarioIdNum}, trying events:`, mappingError);
+          // If it's a rate limit error, skip bettor counting entirely
+          if (mappingError?.code === -32603 || mappingError?.message?.includes('rate limit')) {
+            console.warn(`Rate limited while fetching bettors for scenario ${scenarioIdNum}, skipping bettor count`);
+          } else {
+            console.warn(`scenarioBettors mapping failed for scenario ${scenarioIdNum}, trying events:`, mappingError);
+          }
         }
         
         // If mapping returned 0 or failed, try querying events as fallback
@@ -326,25 +388,41 @@ async function convertScenario(
  */
 export async function getAllScenarios(): Promise<Scenario[]> {
   const contract = getContract();
-  const count = await contract.getScenarioCount();
+  const count = await retryWithBackoff(() => contract.getScenarioCount());
   const scenarios: Scenario[] = [];
 
   for (let i = 1; i <= Number(count); i++) {
     try {
-      const scenarioData = await contract.getScenario(i);
+      const scenarioData = await retryWithBackoff(() => contract.getScenario(i));
       try {
         scenarios.push(await convertScenario(scenarioData, i.toString(), contract));
-      } catch (convertError) {
-        // If convertScenario fails (e.g., bettor counting), try without contract for bettors
-        console.warn(`Error converting scenario ${i}, trying without bettor data:`, convertError);
+      } catch (convertError: any) {
+        // If convertScenario fails (e.g., bettor counting or rate limiting), try without contract for bettors
+        if (convertError?.code === -32603 || convertError?.message?.includes('rate limit')) {
+          console.warn(`Rate limited while processing scenario ${i}, skipping bettor data`);
+        } else {
+          console.warn(`Error converting scenario ${i}, trying without bettor data:`, convertError);
+        }
         try {
           scenarios.push(await convertScenario(scenarioData, i.toString()));
         } catch (fallbackError) {
           console.error(`Error converting scenario ${i} (fallback):`, fallbackError);
         }
       }
-    } catch (error) {
-      console.error(`Error fetching scenario ${i}:`, error);
+      
+      // Small delay between scenarios to avoid rate limiting
+      if (i < Number(count)) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    } catch (error: any) {
+      // If rate limited, skip this scenario and continue
+      if (error?.code === -32603 || error?.message?.includes('rate limit')) {
+        console.warn(`Rate limited while fetching scenario ${i}, skipping`);
+        // Wait a bit longer before continuing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        console.error(`Error fetching scenario ${i}:`, error);
+      }
     }
   }
 
@@ -467,10 +545,18 @@ export async function placeBet(
   amount: number,
   choice: boolean
 ): Promise<ethers.ContractTransactionResponse> {
-  const contract = await getContractWithSigner();
-  const amountWei = parseUSDC(amount.toString());
-  
-  return await contract.placeBet(scenarioId, amountWei, choice);
+  try {
+    const contract = await getContractWithSigner();
+    const amountWei = parseUSDC(amount.toString());
+    
+    return await contract.placeBet(scenarioId, amountWei, choice);
+  } catch (error: any) {
+    // Provide better error message for rate limiting
+    if (error?.code === -32603 || error?.message?.includes('rate limit') || error?.message?.includes('rate limited')) {
+      throw new Error('The network is currently experiencing high traffic. Please wait a moment and try again.');
+    }
+    throw error;
+  }
 }
 
 /**
