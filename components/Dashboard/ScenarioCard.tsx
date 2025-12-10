@@ -43,13 +43,16 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onSelect }
       </div>
 
       {/* Title */}
-      <h3 className="text-xl font-display font-bold text-white mb-2 leading-tight group-hover:text-secondary transition-colors">
+      <h3 className={`text-xl font-display font-bold text-white leading-tight group-hover:text-secondary transition-colors ${scenario.description && scenario.description !== scenario.title ? 'mb-2' : 'mb-6'}`}>
         {scenario.title}
       </h3>
       
-      <p className="text-white/60 text-sm line-clamp-2 mb-6 flex-grow">
-        {scenario.description}
-      </p>
+      {/* Only show description if it's different from title */}
+      {scenario.description && scenario.description !== scenario.title && (
+        <p className="text-white/60 text-sm line-clamp-2 mb-6 flex-grow">
+          {scenario.description}
+        </p>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
