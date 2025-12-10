@@ -519,7 +519,7 @@ const App: React.FC = () => {
 
     try {
       const { placeBet, approveUSDC, getUSDCAllowance, parseUSDC } = await import('@/lib/web3');
-      const { getContractAddress, getScenario } = await import('./services/contractService');
+      const { getContractAddress, getScenario } = await import('@/services/contractService');
       
       const contractAddress = getContractAddress();
       if (!contractAddress) {
@@ -542,7 +542,7 @@ const App: React.FC = () => {
       }
 
       // Debug: Check contract MIN_BET
-      const { getMinBet } = await import('./services/contractService');
+      const { getMinBet } = await import('@/services/contractService');
       const { formatUSDC } = await import('@/lib/web3');
       const minBet = await getMinBet();
       console.log('🔍 Debug Bet Info:');
@@ -579,7 +579,7 @@ const App: React.FC = () => {
 
       // Place the bet
       console.log('  Placing bet on contract...');
-      const { placeBet: placeBetContract } = await import('./services/contractService');
+      const { placeBet: placeBetContract } = await import('@/services/contractService');
       const tx = await placeBetContract(
         scenarioId,
         amount,
@@ -591,7 +591,7 @@ const App: React.FC = () => {
       await tx.wait();
 
       // Refresh scenarios and user data
-      const { getAllScenarios, getAllUserBets } = await import('./services/contractService');
+      const { getAllScenarios, getAllUserBets } = await import('@/services/contractService');
       const updatedScenarios = await getAllScenarios();
       setScenarios(updatedScenarios);
       
