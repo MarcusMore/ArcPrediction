@@ -86,17 +86,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ walletAddress }) => {
 
     setIsAddingAdmin(true);
     try {
+      console.log('🔵 Attempting to add admin:', newAdminAddress);
       const tx = await addAdmin(newAdminAddress);
-      await tx.wait();
+      console.log('🔵 Transaction sent:', tx.hash);
+      const receipt = await tx.wait();
+      console.log('🔵 Transaction confirmed:', receipt);
       alert('✅ Admin added successfully!');
       setNewAdminAddress('');
       await loadAdmins();
     } catch (error: any) {
-      console.error('Error adding admin:', error);
+      console.error('❌ Full error object:', error);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error reason:', error.reason);
+      console.error('❌ Error data:', error.data);
+      console.error('❌ Error info:', error.info);
+      console.error('❌ Error args:', error.args);
+      
       let errorMessage = 'Failed to add admin.';
       
       // Handle user rejection
-      if (error.code === 4001 || error.message?.includes('user rejected') || error.message?.includes('User denied')) {
+      if (error.code === 4001 || error.message?.includes('user rejected') || error.message?.includes('User denied') || error.message?.includes('rejected')) {
         setIsAddingAdmin(false);
         return;
       }
@@ -114,13 +124,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ walletAddress }) => {
             errorMessage = revertReason;
           } else if (revertReason?.message) {
             errorMessage = revertReason.message;
+          } else if (typeof revertReason === 'object') {
+            // Try to stringify the object
+            errorMessage = JSON.stringify(revertReason).substring(0, 200);
           }
         } catch (e) {
           console.error('Error parsing error data:', e);
         }
+      } else if (error.info?.error?.data) {
+        // Handle ethers v6 error format
+        const errorData = error.info.error.data;
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
       } else if (error.message) {
         const msg = error.message;
-        if (msg.includes('user rejected') || msg.includes('User denied')) {
+        if (msg.includes('user rejected') || msg.includes('User denied') || msg.includes('rejected')) {
           setIsAddingAdmin(false);
           return;
         }
@@ -136,17 +157,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ walletAddress }) => {
           } else {
             errorMessage = 'Transaction reverted. Check console for details.';
           }
+        } else if (msg.includes('data (action=')) {
+          // Handle the specific truncated error format
+          errorMessage = 'Contract call failed. Please check: 1) You are the contract owner, 2) The address is valid, 3) The contract supports addAdmin. Check browser console for full error.';
         } else {
           errorMessage = msg;
         }
+      } else if (error.toString) {
+        errorMessage = error.toString();
       }
       
       // Truncate very long error messages
-      if (errorMessage.length > 200) {
-        errorMessage = errorMessage.substring(0, 200) + '...';
+      if (errorMessage.length > 300) {
+        errorMessage = errorMessage.substring(0, 300) + '...';
       }
       
-      alert(`❌ ${errorMessage}`);
+      alert(`❌ ${errorMessage}\n\nCheck browser console (F12) for full error details.`);
     } finally {
       setIsAddingAdmin(false);
     }

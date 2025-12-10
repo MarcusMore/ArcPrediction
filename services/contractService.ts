@@ -475,10 +475,27 @@ export async function addAdmin(adminAddress: string): Promise<ethers.ContractTra
   try {
     // Normalize address before calling
     const normalizedAddress = normalizeAddress(adminAddress);
+    console.log('🔵 Normalized admin address:', normalizedAddress);
+    
     const contract = await getContractWithSigner();
-    return await contract.addAdmin(normalizedAddress);
+    console.log('🔵 Contract address:', getContractAddress());
+    console.log('🔵 Calling addAdmin on contract...');
+    
+    // Call the contract function
+    const tx = await contract.addAdmin(normalizedAddress);
+    console.log('🔵 Transaction created:', tx);
+    return tx;
   } catch (error: any) {
-    console.error('Error adding admin:', error);
+    console.error('❌ Error in addAdmin service:', error);
+    console.error('❌ Error details:', {
+      code: error.code,
+      message: error.message,
+      reason: error.reason,
+      data: error.data,
+      info: error.info,
+      args: error.args
+    });
+    
     // Re-throw with better error message if possible
     if (error.reason) {
       throw new Error(error.reason);
