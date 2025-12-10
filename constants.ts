@@ -34,7 +34,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: '3',
     type: 'INFO',
-    title: 'Welcome to ArcPrediction',
+    title: 'Welcome to Forsightt',
     message: 'Your wallet has been successfully connected. Start trading now!',
     timestamp: '1 day ago',
     read: true

@@ -6,7 +6,7 @@ Your project has been committed locally. Follow these steps to publish to GitHub
 
 1. Go to https://github.com/new
 2. Create a new repository:
-   - **Repository name**: `arcprediction` or `web3-betting-platform` (your choice)
+   - **Repository name**: `forsightt` or `web3-betting-platform` (your choice)
    - **Description**: "Decentralized betting platform on Arc Testnet"
    - **Visibility**: Choose Public or Private
    - **DO NOT** initialize with README, .gitignore, or license (we already have these)
@@ -87,5 +87,6 @@ git push -u origin main
 - GitHub authentication (SSH keys or personal access token)
 - Repository permissions
 - Network connectivity
+
 
 

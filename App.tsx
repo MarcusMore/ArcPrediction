@@ -420,7 +420,7 @@ const App: React.FC = () => {
         setNotifications([{
           id: 'welcome',
           type: 'INFO',
-          title: 'Welcome to ArcPrediction',
+          title: 'Welcome to Forsightt',
           message: 'Your wallet has been successfully connected. Start trading now!',
           timestamp: 'Just now',
           read: welcomeRead
@@ -898,7 +898,7 @@ const App: React.FC = () => {
             <main className={`lg:pl-20 min-h-screen ${isDemoMode && !isLoggedIn ? 'pt-16' : ''}`}>
                 {/* Header */}
                 <header className="sticky top-0 z-30 px-6 py-4 flex justify-between items-center bg-dark/80 backdrop-blur-md border-b border-white/5">
-                    <h1 className="text-xl font-display font-bold lg:hidden">ArcPrediction</h1>
+                    <h1 className="text-xl font-display font-bold lg:hidden">Forsightt</h1>
                     
                     {/* Search Bar (Desktop) */}
                     <div className="hidden md:flex items-center gap-4 flex-1 max-w-xl ml-8">

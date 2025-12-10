@@ -1,14 +1,14 @@
-# ArcPrediction Whitepaper
+# Forsightt Whitepaper
 
 ## Executive Summary
 
-ArcPrediction is a decentralized prediction market platform built on the Arc Testnet, enabling users to bet USDC on yes/no scenarios. The platform leverages smart contracts for transparent, trustless betting with automatic settlement and fee distribution.
+Forsightt is a decentralized prediction market platform built on the Arc Testnet, enabling users to bet USDC on yes/no scenarios. The platform leverages smart contracts for transparent, trustless betting with automatic settlement and fee distribution.
 
 ## 1. Product Overview
 
-### 1.1 What is ArcPrediction?
+### 1.1 What is Forsightt?
 
-ArcPrediction is a decentralized betting platform where users can participate in prediction markets by betting on binary outcomes (Yes/No) for various scenarios across categories including Finance, Crypto, Sports, and Politics.
+Forsightt is a decentralized betting platform where users can participate in prediction markets by betting on binary outcomes (Yes/No) for various scenarios across categories including Finance, Crypto, Sports, and Politics.
 
 ### 1.2 Key Features
 
@@ -331,7 +331,7 @@ If all bets are on one side:
 
 ### 10.1 Achievement System
 
-ArcPrediction includes a comprehensive gamification system with 30+ achievements across multiple categories:
+Forsightt includes a comprehensive gamification system with 30+ achievements across multiple categories:
 
 **Achievement Categories:**
 - **Betting**: First bet, 10/50/100/500 bets milestones
@@ -472,7 +472,7 @@ Comprehensive tracking and analytics:
 
 ### 12.1 Testnet Disclaimer
 
-ArcPrediction is currently deployed on Arc Testnet for testing purposes only. All tokens and transactions are on a test network and have no real-world value.
+Forsightt is currently deployed on Arc Testnet for testing purposes only. All tokens and transactions are on a test network and have no real-world value.
 
 ### 12.2 Regulatory Notice
 

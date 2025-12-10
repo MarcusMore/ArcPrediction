@@ -1,4 +1,4 @@
-# ArcPrediction - Decentralized Betting Platform
+# Forsightt - Decentralized Betting Platform
 
 A comprehensive smart contract system for a decentralized betting platform on the Arc Testnet where users can bet USDC on yes/no scenarios posted by an admin.
 

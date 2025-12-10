@@ -140,7 +140,7 @@ export const ConnectWalletModal: React.FC<ConnectWalletModalProps> = ({ isOpen, 
                 </div>
 
                 <div className="text-xs text-white/40 text-center px-4">
-                  By signing this message, you agree to ArcPrediction's Terms of Service and Privacy Policy. This will not trigger a blockchain transaction or cost gas.
+                  By signing this message, you agree to Forsightt's Terms of Service and Privacy Policy. This will not trigger a blockchain transaction or cost gas.
                 </div>
 
                 <Button 

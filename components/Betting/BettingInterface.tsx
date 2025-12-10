@@ -87,7 +87,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ scenario, on
             
             {scenario.description && scenario.description !== scenario.title && (
               <p className="text-white/70 text-sm leading-relaxed">{scenario.description}</p>
-            )}
+                    )}
           </div>
 
           {/* Right: Betting Controls */}
@@ -96,8 +96,8 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ scenario, on
                 <div className="flex items-center gap-2">
                     {canBet ? (
                         <>
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-xs font-mono text-green-500">LIVE MARKET</span>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-mono text-green-500">LIVE MARKET</span>
                         </>
                     ) : scenario.isResolved ? (
                         <>
@@ -143,18 +143,18 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ scenario, on
                 {canBet && (
                     <div className="mb-4">
                         <div className="flex justify-between text-xs mb-1.5">
-                            <span className="text-white/60">Amount</span>
-                            <span className="font-mono text-white">${amount} USDC</span>
-                        </div>
-                        <input 
-                            type="range" 
+                        <span className="text-white/60">Amount</span>
+                        <span className="font-mono text-white">${amount} USDC</span>
+                    </div>
+                    <input 
+                        type="range" 
                             min="1" 
                             max="200" 
                             step="1"
-                            value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
+                        value={amount}
+                        onChange={(e) => setAmount(Number(e.target.value))}
                             className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary hover:accent-blue-400"
-                        />
+                    />
                         <div className="flex justify-between mt-1 text-xs text-white/30 font-mono">
                             <span>$1</span>
                             <span>$200</span>
@@ -167,28 +167,28 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ scenario, on
                         <div className="flex justify-between items-center mb-1">
                             <span className="text-xs text-white/60">Potential Return</span>
                             <span className={`text-lg font-mono font-bold ${position === 'YES' ? 'text-secondary' : position === 'NO' ? 'text-accent' : 'text-white'}`}>
-                                ${position ? potentialReturn.toFixed(2) : '0.00'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs text-white/40">
-                             <span>Fee (1%)</span>
-                             <span>${(amount * 0.01).toFixed(2)}</span>
-                        </div>
-                    </GlassCard>
+                            ${position ? potentialReturn.toFixed(2) : '0.00'}
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-white/40">
+                         <span>Fee (1%)</span>
+                         <span>${(amount * 0.01).toFixed(2)}</span>
+                    </div>
+                </GlassCard>
                 )}
              </div>
 
              {canBet ? (
-                <Button 
-                    variant={position === 'YES' ? 'secondary' : position === 'NO' ? 'accent' : 'primary'} 
-                    fullWidth 
+             <Button 
+                variant={position === 'YES' ? 'secondary' : position === 'NO' ? 'accent' : 'primary'} 
+                fullWidth 
                     size="md"
-                    disabled={!position}
-                    onClick={handleBetClick}
-                    className="mt-auto relative overflow-hidden"
-                >
-                    {position ? `BET ${position} - $${amount}` : 'Select Position'}
-                </Button>
+                disabled={!position}
+                onClick={handleBetClick}
+                className="mt-auto relative overflow-hidden"
+             >
+                {position ? `BET ${position} - $${amount}` : 'Select Position'}
+             </Button>
              ) : (
                 <div className="mt-auto p-3 bg-white/5 rounded-lg border border-white/10 text-center">
                     {scenario.isResolved ? (

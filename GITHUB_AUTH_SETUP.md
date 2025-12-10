@@ -9,7 +9,7 @@ GitHub no longer accepts passwords for Git operations. You need to use one of th
 1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
    - Direct link: https://github.com/settings/tokens
 2. Click "Generate new token" → "Generate new token (classic)"
-3. Give it a name: "ArcPrediction Project"
+3. Give it a name: "Forsightt Project"
 4. Select scopes:
    - ✅ `repo` (Full control of private repositories)
    - ✅ `workflow` (if you plan to use GitHub Actions)
@@ -155,5 +155,6 @@ git push -u origin main
 - **PAT**: Quick setup, works immediately
 - **SSH**: More secure, no password prompts after setup
 - **GitHub CLI**: Good for GitHub-specific workflows
+
 
 

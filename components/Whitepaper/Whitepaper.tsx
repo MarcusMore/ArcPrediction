@@ -13,7 +13,7 @@ export const Whitepaper: React.FC = () => {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-4">
           <FileText className="text-primary" size={32} />
-          <h1 className="text-4xl font-display font-bold">ArcPrediction Whitepaper</h1>
+          <h1 className="text-4xl font-display font-bold">Forsightt Whitepaper</h1>
         </div>
         <p className="text-white/60 text-lg">Comprehensive documentation of the decentralized prediction market platform</p>
       </div>
@@ -26,7 +26,7 @@ export const Whitepaper: React.FC = () => {
             Executive Summary
           </h2>
           <p className="text-white/80 leading-relaxed">
-            ArcPrediction is a decentralized prediction market platform built on the Arc Testnet, enabling users to bet USDC on yes/no scenarios. 
+            Forsightt is a decentralized prediction market platform built on the Arc Testnet, enabling users to bet USDC on yes/no scenarios. 
             The platform leverages smart contracts for transparent, trustless betting with automatic settlement and fee distribution.
           </p>
         </GlassCard>
@@ -36,9 +36,9 @@ export const Whitepaper: React.FC = () => {
           <h2 className="text-2xl font-display font-bold mb-4">1. Product Overview</h2>
           <div className="space-y-4">
             <div>
-              <h3 className="text-xl font-bold mb-2">1.1 What is ArcPrediction?</h3>
+              <h3 className="text-xl font-bold mb-2">1.1 What is Forsightt?</h3>
               <p className="text-white/80 leading-relaxed">
-                ArcPrediction is a decentralized betting platform where users can participate in prediction markets by betting on binary outcomes (Yes/No) 
+                Forsightt is a decentralized betting platform where users can participate in prediction markets by betting on binary outcomes (Yes/No) 
                 for various scenarios across categories including Finance, Crypto, Sports, and Politics.
               </p>
             </div>
@@ -362,7 +362,7 @@ export const Whitepaper: React.FC = () => {
               <div className="space-y-3 text-white/80">
                 <div>
                   <strong className="text-white/90">Testnet Disclaimer:</strong>
-                  <p className="text-sm mt-1">ArcPrediction is currently deployed on Arc Testnet for testing purposes only. All tokens and transactions are on a test network and have no real-world value.</p>
+                  <p className="text-sm mt-1">Forsightt is currently deployed on Arc Testnet for testing purposes only. All tokens and transactions are on a test network and have no real-world value.</p>
                 </div>
                 <div>
                   <strong className="text-white/90">Regulatory Notice:</strong>
