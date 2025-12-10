@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, AlertCircle, Clock, Users, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button, GlassCard } from '../ui/GlassComponents';
 import { Scenario } from '../../types';
-import { formatUSDC } from '@/lib/web3';
+import { formatUSDC } from '../../lib/web3';
 
 interface ResolutionModalProps {
   scenario: Scenario;

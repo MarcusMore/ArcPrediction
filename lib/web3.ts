@@ -61,6 +61,8 @@ export const BETTING_PLATFORM_ABI = [
   'function admins(address) external view returns (bool)',
   'function MIN_BET() external view returns (uint256)',
   'function MAX_BET() external view returns (uint256)',
+  'function ADMIN_FEE_PERCENT() external view returns (uint256)',
+  'function paused() external view returns (bool)',
   'event ScenarioCreated(uint256 indexed scenarioId, string description, uint256 bettingDeadline, uint256 resolutionDeadline)',
   'event BetPlaced(address indexed user, uint256 indexed scenarioId, uint256 amount, bool choice)',
   'event ScenarioResolved(uint256 indexed scenarioId, bool outcome, uint256 totalPool, uint256 adminFee)',
