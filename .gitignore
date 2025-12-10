@@ -70,7 +70,9 @@ $RECYCLE.BIN/
 
 # Foundry
 out/
-lib/
+# Note: lib/ is excluded for Foundry, but we need our frontend lib/ directory
+# Use specific Foundry paths instead
+# lib/  # Commented out - we need frontend lib/ directory
 broadcast/
 forge-cache/
 
