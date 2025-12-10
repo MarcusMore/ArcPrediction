@@ -52,8 +52,9 @@ const LandingView: React.FC<{ onConnect: () => void; onViewDemo: () => void }> =
             </h1>
             
             <p className="text-xl text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
-               The first high-frequency prediction market powered by AI analysis. 
-               Zero gas fees, instant settlement, and deep liquidity.
+               Decentralized prediction markets on Arc Testnet. 
+               Bet on real-world events, compete on leaderboards, and earn USDC rewards. 
+               Zero gas fees, instant settlement, and transparent outcomes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
@@ -82,9 +83,9 @@ const LandingView: React.FC<{ onConnect: () => void; onViewDemo: () => void }> =
                   <p className="text-sm text-white/50">Smart contracts settle markets immediately upon resolution.</p>
                </GlassCard>
                <GlassCard className="p-6 bg-white/5 hover:bg-white/10 transition-colors">
-                  <Activity className="text-primary mb-4" size={32} />
-                  <h3 className="text-lg font-bold mb-2">AI-Powered Insights</h3>
-                  <p className="text-sm text-white/50">Real-time market analysis provided by Gemini models.</p>
+                  <BarChart3 className="text-primary mb-4" size={32} />
+                  <h3 className="text-lg font-bold mb-2">Live Markets</h3>
+                  <p className="text-sm text-white/50">Bet on diverse scenarios with real-time odds and market dynamics.</p>
                </GlassCard>
                <GlassCard className="p-6 bg-white/5 hover:bg-white/10 transition-colors">
                   <Trophy className="text-accent mb-4" size={32} />
