@@ -478,12 +478,42 @@ export async function addAdmin(adminAddress: string): Promise<ethers.ContractTra
     console.log('🔵 Normalized admin address:', normalizedAddress);
     
     const contract = await getContractWithSigner();
-    console.log('🔵 Contract address:', getContractAddress());
+    const contractAddress = getContractAddress();
+    console.log('🔵 Contract address:', contractAddress);
+    
+    // Check if contract has addAdmin function by trying to get the function
+    try {
+      const addAdminFunction = contract.getFunction('addAdmin');
+      console.log('🔵 addAdmin function found:', addAdminFunction);
+    } catch (funcError: any) {
+      console.error('❌ addAdmin function not found in contract ABI');
+      throw new Error('The contract does not support addAdmin. Please ensure you are using the latest contract version with admin management features.');
+    }
+    
     console.log('🔵 Calling addAdmin on contract...');
     
-    // Call the contract function
-    const tx = await contract.addAdmin(normalizedAddress);
-    console.log('🔵 Transaction created:', tx);
+    // Call the contract function with explicit gas estimation handling
+    try {
+      // First, try to estimate gas to see if the call would succeed
+      const gasEstimate = await contract.addAdmin.estimateGas(normalizedAddress);
+      console.log('🔵 Gas estimate:', gasEstimate.toString());
+    } catch (estimateError: any) {
+      console.error('❌ Gas estimation failed:', estimateError);
+      // If gas estimation fails, it might be because:
+      // 1. Function doesn't exist
+      // 2. Transaction would revert (permission issue, etc.)
+      if (estimateError.code === 'CALL_EXCEPTION' || estimateError.message?.includes('missing revert data')) {
+        throw new Error('Contract call failed. Possible reasons: 1) Contract does not have addAdmin function, 2) You are not the contract owner, 3) Address is already an admin, 4) Invalid address format.');
+      }
+      throw estimateError;
+    }
+    
+    // Call the contract function directly (without separate gas estimation)
+    // The gas estimation above already validated the call
+    const tx = await contract.addAdmin(normalizedAddress, {
+      // Don't specify gas limit, let MetaMask estimate it
+    });
+    console.log('🔵 Transaction created:', tx.hash);
     return tx;
   } catch (error: any) {
     console.error('❌ Error in addAdmin service:', error);
@@ -502,6 +532,10 @@ export async function addAdmin(adminAddress: string): Promise<ethers.ContractTra
     } else if (error.data?.message) {
       throw new Error(error.data.message);
     } else if (error.message) {
+      // If it's already our custom error, throw it as-is
+      if (error.message.includes('does not support') || error.message.includes('Contract call failed')) {
+        throw error;
+      }
       throw error;
     } else {
       throw new Error('Failed to add admin. Please check console for details.');

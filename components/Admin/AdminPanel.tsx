@@ -14,7 +14,8 @@ import {
   addAdmin,
   removeAdmin,
   getAllAdmins,
-  isAdmin as checkIsAdmin
+  isAdmin as checkIsAdmin,
+  getContractAddress
 } from '../../services/contractService';
 import { Scenario } from '../../types';
 import { formatUSDC } from '@/lib/web3';
@@ -157,9 +158,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ walletAddress }) => {
           } else {
             errorMessage = 'Transaction reverted. Check console for details.';
           }
-        } else if (msg.includes('data (action=')) {
+        } else if (msg.includes('data (action=') || msg.includes('missing revert data')) {
           // Handle the specific truncated error format
-          errorMessage = 'Contract call failed. Please check: 1) You are the contract owner, 2) The address is valid, 3) The contract supports addAdmin. Check browser console for full error.';
+          errorMessage = 'Contract call failed during gas estimation. This usually means:\n\n1) The contract does not have the addAdmin function (old contract version)\n2) You are not the contract owner\n3) The address is already an admin\n4) The contract is paused\n\nPlease verify:\n- Contract address: ' + (getContractAddress() || 'Not set') + '\n- You are the owner\n- Contract has admin management features\n\nCheck browser console (F12) for full error details.';
         } else {
           errorMessage = msg;
         }
