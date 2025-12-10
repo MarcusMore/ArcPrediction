@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Clock, Users, ArrowRight } from 'lucide-react';
 import { Scenario } from '../../types';
@@ -9,9 +9,52 @@ interface ScenarioCardProps {
   onSelect: (scenario: Scenario) => void;
 }
 
+function formatTimeRemaining(seconds: number): string {
+  if (seconds <= 0) return 'Bet finished';
+  
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  } else if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
+}
+
 export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onSelect }) => {
   const yesPercent = Math.round(scenario.yesPrice * 100);
   const noPercent = 100 - yesPercent;
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+  
+  useEffect(() => {
+    const updateTimeRemaining = () => {
+      if (scenario.isClosed || scenario.isResolved) {
+        setTimeRemaining('Bet finished');
+        return;
+      }
+      
+      if (scenario.bettingDeadline) {
+        const now = Math.floor(Date.now() / 1000);
+        const deadline = scenario.bettingDeadline;
+        const remaining = deadline - now;
+        setTimeRemaining(formatTimeRemaining(remaining));
+      } else {
+        setTimeRemaining('');
+      }
+    };
+    
+    updateTimeRemaining();
+    const interval = setInterval(updateTimeRemaining, 1000);
+    
+    return () => clearInterval(interval);
+  }, [scenario.bettingDeadline, scenario.isClosed, scenario.isResolved]);
 
   return (
     <GlassCard 
@@ -38,7 +81,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onSelect }
         </div>
         <div className="flex items-center text-white/50 text-xs font-mono">
           <Clock size={12} className="mr-1" />
-          {scenario.endDate}
+          {timeRemaining || scenario.endDate}
         </div>
       </div>
 
@@ -88,9 +131,17 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onSelect }
 
       {/* Footer */}
       <div className="flex justify-between items-center mt-auto border-t border-white/10 pt-4">
-        <div className="flex items-center text-white/40 text-xs">
-          <Users size={14} className="mr-1" />
-          <span className="font-mono">${scenario.totalVolume.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center text-white/40 text-xs">
+            <Users size={14} className="mr-1" />
+            <span className="font-mono">${scenario.totalVolume.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          {timeRemaining && !scenario.isClosed && !scenario.isResolved && (
+            <div className="flex items-center text-white/30 text-xs">
+              <Clock size={12} className="mr-1" />
+              <span className="font-mono">{timeRemaining}</span>
+            </div>
+          )}
         </div>
         {!(scenario.isClosed ?? false) && !(scenario.isResolved ?? false) ? (
           <Button variant="ghost" size="sm" className="group-hover:translate-x-1 transition-transform">
