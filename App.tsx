@@ -24,7 +24,7 @@ const INITIAL_BETS: UserBet[] = [
     { id: 'b2', scenarioId: '3', amount: 200, position: 'YES', timestamp: Date.now(), entryPrice: 0.70, currentValue: 220 },
 ];
 
-const LandingView: React.FC<{ onConnect: () => void }> = ({ onConnect }) => {
+const LandingView: React.FC<{ onConnect: () => void; onViewDemo: () => void }> = ({ onConnect, onViewDemo }) => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-4">
        {/* Ambient Background for Landing */}
@@ -64,7 +64,12 @@ const LandingView: React.FC<{ onConnect: () => void }> = ({ onConnect }) => {
                >
                   <Wallet className="mr-3" /> Connect Wallet
                </Button>
-               <Button variant="outline" size="lg" className="h-16 px-10 text-lg">
+               <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="h-16 px-10 text-lg"
+                  onClick={onViewDemo}
+               >
                   View Demo <ArrowRight className="ml-2" />
                </Button>
             </div>
@@ -109,6 +114,7 @@ const App: React.FC = () => {
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Notification State
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -722,9 +728,15 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-dark text-white font-sans selection:bg-primary/30">
         
         {/* If Not Logged In, Show Landing View */}
-        {!isLoggedIn ? (
+        {!isLoggedIn && !isDemoMode ? (
           <>
-            <LandingView onConnect={() => setConnectModalOpen(true)} />
+            <LandingView 
+              onConnect={() => setConnectModalOpen(true)} 
+              onViewDemo={() => {
+                setIsDemoMode(true);
+                setView('DASHBOARD');
+              }}
+            />
             {/* Background Ambient Mesh (Persistent) */}
             <div className="fixed inset-0 pointer-events-none -z-10">
                 <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/5 rounded-full blur-[120px]" />
@@ -732,8 +744,30 @@ const App: React.FC = () => {
             </div>
           </>
         ) : (
-          /* Authenticated App Layout */
+          /* Authenticated App Layout or Demo Mode */
           <>
+            {/* Demo Mode Banner */}
+            {isDemoMode && !isLoggedIn && (
+              <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-primary/90 to-secondary/90 backdrop-blur-md border-b border-white/20 px-6 py-3">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge type="trend">DEMO MODE</Badge>
+                    <span className="text-sm text-white/80">Explore the platform without connecting your wallet</span>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      setIsDemoMode(false);
+                      setView('DASHBOARD');
+                    }}
+                  >
+                    Exit Demo
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Background Ambient Mesh */}
             <div className="fixed inset-0 pointer-events-none -z-10">
                 <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[120px] animate-pulse-slow" />
@@ -771,7 +805,7 @@ const App: React.FC = () => {
             </nav>
 
             {/* Main Content Area */}
-            <main className="lg:pl-20 min-h-screen">
+            <main className={`lg:pl-20 min-h-screen ${isDemoMode && !isLoggedIn ? 'pt-16' : ''}`}>
                 {/* Header */}
                 <header className="sticky top-0 z-30 px-6 py-4 flex justify-between items-center bg-dark/80 backdrop-blur-md border-b border-white/5">
                     <h1 className="text-xl font-display font-bold lg:hidden">ArcPrediction</h1>
