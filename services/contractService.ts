@@ -112,6 +112,69 @@ async function getContractWithSigner(): Promise<ethers.Contract> {
 }
 
 /**
+ * Get bettor counts from BetPlaced events (fallback method)
+ */
+async function getBettorsFromEvents(
+  contract: ethers.Contract,
+  scenarioId: number
+): Promise<{ totalBettors: number; yesBettors: number; noBettors: number }> {
+  try {
+    const provider = getProvider();
+    
+    // Create filter for BetPlaced events for this scenario
+    // BetPlaced(address indexed user, uint256 indexed scenarioId, uint256 amount, bool choice)
+    const filter = contract.filters.BetPlaced(null, scenarioId);
+    
+    // Query events from the contract deployment (or last 10000 blocks if too old)
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - 10000); // Last 10000 blocks
+    
+    const events = await contract.queryFilter(filter, fromBlock, 'latest');
+    
+    // Count unique bettors and their choices
+    // Note: If a bettor placed multiple bets, we count them once but use their latest choice
+    const uniqueBettors = new Set<string>();
+    const bettorChoices = new Map<string, boolean>();
+    
+    events.forEach((event) => {
+      if (event.args && event.args.length >= 4) {
+        const bettor = event.args[0]; // user address (indexed)
+        const eventScenarioId = event.args[1]; // scenarioId (indexed)
+        const choice = event.args[3]; // choice (bool)
+        
+        // Double-check this event is for the correct scenario
+        if (Number(eventScenarioId) === scenarioId) {
+          const bettorLower = bettor.toLowerCase();
+          uniqueBettors.add(bettorLower);
+          // Use latest choice if bettor placed multiple bets
+          bettorChoices.set(bettorLower, choice);
+        }
+      }
+    });
+    
+    // Count YES and NO bettors
+    let yesBettors = 0;
+    let noBettors = 0;
+    bettorChoices.forEach((choice) => {
+      if (choice === true) {
+        yesBettors++;
+      } else {
+        noBettors++;
+      }
+    });
+    
+    return {
+      totalBettors: uniqueBettors.size,
+      yesBettors,
+      noBettors,
+    };
+  } catch (error: any) {
+    console.warn(`Error querying BetPlaced events for scenario ${scenarioId}:`, error?.message || error);
+    return { totalBettors: 0, yesBettors: 0, noBettors: 0 };
+  }
+}
+
+/**
  * Convert contract scenario to frontend Scenario type
  */
 async function convertScenario(
@@ -157,39 +220,74 @@ async function convertScenario(
   }
 
   // Get bettor counts if contract is provided
-  // Note: This is optimized to only count if there are bettors (to avoid unnecessary calls)
+  // Try mapping first, then fallback to events if mapping is empty
   let yesBettors = 0;
   let noBettors = 0;
   let totalBettors = 0;
-  if (contract && totalPoolNum > 0) {
+  if (contract) {
     try {
-      const bettors = await contract.scenarioBettors(id);
-      totalBettors = bettors.length;
-      
-      // Only count if there are bettors (optimization)
-      if (totalBettors > 0 && totalBettors <= 100) { // Limit to 100 bettors to avoid timeout
-        // Count bettors by checking their bets (batch in parallel for better performance)
-        const betPromises = bettors.slice(0, 100).map(async (bettor: string) => {
-          try {
-            const bet = await contract.getUserBet(bettor, id);
-            return bet[1] > 0n ? bet[2] : null; // Return choice if bet exists, null otherwise
-          } catch (e) {
-            return null;
+      // Convert id to number for contract call
+      const scenarioIdNum = parseInt(id, 10);
+      if (isNaN(scenarioIdNum)) {
+        console.warn(`Invalid scenario ID for bettor counting: ${id}`);
+      } else {
+        // First, try to get bettors from the mapping
+        try {
+          const bettors = await contract.scenarioBettors(scenarioIdNum);
+          totalBettors = bettors && Array.isArray(bettors) ? bettors.length : 0;
+          
+          // Only count if there are bettors (optimization)
+          if (totalBettors > 0 && totalBettors <= 100) { // Limit to 100 bettors to avoid timeout
+            // Count bettors by checking their bets (batch in parallel for better performance)
+            const betPromises = bettors.slice(0, 100).map(async (bettor: string) => {
+              try {
+                const bet = await contract.getUserBet(bettor, scenarioIdNum);
+                return bet[1] > 0n ? bet[2] : null; // Return choice if bet exists, null otherwise
+              } catch (e) {
+                return null;
+              }
+            });
+            
+            const betResults = await Promise.all(betPromises);
+            betResults.forEach((choice) => {
+              if (choice === true) yesBettors++;
+              else if (choice === false) noBettors++;
+            });
+          } else if (totalBettors > 100) {
+            // Too many bettors, just set total
+            totalBettors = bettors.length;
           }
-        });
+        } catch (mappingError) {
+          // Mapping failed, will try events
+          console.warn(`scenarioBettors mapping failed for scenario ${scenarioIdNum}, trying events:`, mappingError);
+        }
         
-        const betResults = await Promise.all(betPromises);
-        betResults.forEach((choice) => {
-          if (choice === true) yesBettors++;
-          else if (choice === false) noBettors++;
-        });
-      } else if (totalBettors > 100) {
-        // Too many bettors, just set total
-        totalBettors = bettors.length;
+        // If mapping returned 0 or failed, try querying events as fallback
+        if (totalBettors === 0) {
+          const eventBettors = await getBettorsFromEvents(contract, scenarioIdNum);
+          if (eventBettors.totalBettors > 0) {
+            totalBettors = eventBettors.totalBettors;
+            yesBettors = eventBettors.yesBettors;
+            noBettors = eventBettors.noBettors;
+          }
+        }
       }
-    } catch (error) {
-      // If scenarioBettors doesn't exist or fails, just use 0
-      // This is expected for older contracts without this mapping
+    } catch (error: any) {
+      // Log error for debugging but don't fail the scenario conversion
+      console.warn(`Error fetching bettor counts for scenario ${id}:`, error?.message || error);
+      // Try events as last resort
+      try {
+        const scenarioIdNum = parseInt(id, 10);
+        if (!isNaN(scenarioIdNum)) {
+          const eventBettors = await getBettorsFromEvents(contract, scenarioIdNum);
+          totalBettors = eventBettors.totalBettors;
+          yesBettors = eventBettors.yesBettors;
+          noBettors = eventBettors.noBettors;
+        }
+      } catch (eventError) {
+        // Events also failed, keep 0
+        console.warn(`Event query also failed for scenario ${id}:`, eventError);
+      }
     }
   }
 

@@ -160,3 +160,4 @@ The payment system implementation **fully matches** the described behavior. The 
 
 All frontend calculations are consistent with the contract logic, ensuring accurate display of winnings and profits throughout the application.
 
+

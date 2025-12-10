@@ -90,7 +90,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onSelect }
       <div className="flex justify-between items-center mt-auto border-t border-white/10 pt-4">
         <div className="flex items-center text-white/40 text-xs">
           <Users size={14} className="mr-1" />
-          <span className="font-mono">${(scenario.totalVolume / 1000).toFixed(1)}k Vol</span>
+          <span className="font-mono">${scenario.totalVolume.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
         {!(scenario.isClosed ?? false) && !(scenario.isResolved ?? false) ? (
           <Button variant="ghost" size="sm" className="group-hover:translate-x-1 transition-transform">
