@@ -484,37 +484,70 @@ export async function addAdmin(adminAddress: string): Promise<ethers.ContractTra
     // Check if contract has addAdmin function by trying to get the function
     try {
       const addAdminFunction = contract.getFunction('addAdmin');
-      console.log('🔵 addAdmin function found:', addAdminFunction);
+      console.log('🔵 addAdmin function found in ABI');
     } catch (funcError: any) {
       console.error('❌ addAdmin function not found in contract ABI');
-      throw new Error('The contract does not support addAdmin. Please ensure you are using the latest contract version with admin management features.');
+      throw new Error('The contract ABI does not include addAdmin. Please ensure you are using the latest contract version with admin management features.');
+    }
+    
+    // Verify contract owner before attempting call
+    try {
+      const owner = await contract.owner();
+      const signer = await getSigner();
+      const signerAddress = await signer.getAddress();
+      console.log('🔵 Contract owner:', owner);
+      console.log('🔵 Your address:', signerAddress);
+      if (owner.toLowerCase() !== signerAddress.toLowerCase()) {
+        throw new Error(`You are not the contract owner. Owner is: ${owner}, Your address: ${signerAddress}`);
+      }
+    } catch (ownerCheckError: any) {
+      if (ownerCheckError.message?.includes('not the contract owner')) {
+        throw ownerCheckError;
+      }
+      console.warn('⚠️ Could not verify owner (continuing anyway):', ownerCheckError);
+    }
+    
+    // Check if address is already admin
+    try {
+      const isAlreadyAdmin = await contract.isAdmin(normalizedAddress);
+      console.log('🔵 Is already admin:', isAlreadyAdmin);
+      if (isAlreadyAdmin) {
+        throw new Error('This address is already an admin.');
+      }
+    } catch (adminCheckError: any) {
+      if (adminCheckError.message?.includes('already an admin')) {
+        throw adminCheckError;
+      }
+      console.warn('⚠️ Could not check admin status (continuing anyway):', adminCheckError);
     }
     
     console.log('🔵 Calling addAdmin on contract...');
     
-    // Call the contract function with explicit gas estimation handling
+    // Try to call the function directly - let MetaMask handle gas estimation
+    // This avoids the "missing revert data" issue during separate gas estimation
     try {
-      // First, try to estimate gas to see if the call would succeed
-      const gasEstimate = await contract.addAdmin.estimateGas(normalizedAddress);
-      console.log('🔵 Gas estimate:', gasEstimate.toString());
-    } catch (estimateError: any) {
-      console.error('❌ Gas estimation failed:', estimateError);
-      // If gas estimation fails, it might be because:
-      // 1. Function doesn't exist
-      // 2. Transaction would revert (permission issue, etc.)
-      if (estimateError.code === 'CALL_EXCEPTION' || estimateError.message?.includes('missing revert data')) {
-        throw new Error('Contract call failed. Possible reasons: 1) Contract does not have addAdmin function, 2) You are not the contract owner, 3) Address is already an admin, 4) Invalid address format.');
+      console.log('🔵 Attempting contract call (MetaMask will estimate gas)...');
+      const tx = await contract.addAdmin(normalizedAddress);
+      console.log('🔵 Transaction created:', tx.hash);
+      return tx;
+    } catch (callError: any) {
+      console.error('❌ Contract call failed:', callError);
+      
+      // Handle specific error cases
+      if (callError.code === 'CALL_EXCEPTION' || callError.message?.includes('missing revert data')) {
+        // The most likely cause is that the contract doesn't actually have this function
+        // even though it's in the ABI (old contract deployment)
+        throw new Error(
+          'Contract call failed with "missing revert data". This usually means:\n\n' +
+          '1) The deployed contract at ' + contractAddress + ' does not have the addAdmin function\n' +
+          '   (contract was deployed before admin management was added)\n' +
+          '2) The contract address in your .env file is incorrect\n' +
+          '3) Network/RPC issue\n\n' +
+          'Solution: Deploy a new contract with the latest code that includes addAdmin, or update the contract address in your .env file.'
+        );
       }
-      throw estimateError;
+      throw callError;
     }
-    
-    // Call the contract function directly (without separate gas estimation)
-    // The gas estimation above already validated the call
-    const tx = await contract.addAdmin(normalizedAddress, {
-      // Don't specify gas limit, let MetaMask estimate it
-    });
-    console.log('🔵 Transaction created:', tx.hash);
-    return tx;
   } catch (error: any) {
     console.error('❌ Error in addAdmin service:', error);
     console.error('❌ Error details:', {
