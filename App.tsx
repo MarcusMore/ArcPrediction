@@ -144,6 +144,80 @@ const App: React.FC = () => {
     }
   };
 
+  // Auto-reconnect wallet on page load
+  useEffect(() => {
+    const reconnectWallet = async () => {
+      try {
+        // Check if there's a stored wallet address
+        const storedAddress = localStorage.getItem('walletAddress');
+        if (!storedAddress) {
+          return; // No stored wallet, user needs to connect manually
+        }
+
+        // Check if MetaMask is available
+        if (typeof window.ethereum === 'undefined') {
+          // MetaMask not available, clear stored address
+          localStorage.removeItem('walletAddress');
+          return;
+        }
+
+        // Check if the stored address is still connected
+        const { getProvider } = await import('./lib/web3');
+        const provider = getProvider();
+        const accounts = await provider.send('eth_accounts', []);
+        
+        if (accounts.length > 0 && accounts[0].toLowerCase() === storedAddress.toLowerCase()) {
+          // Wallet is still connected, restore session
+          console.log('🔄 Auto-reconnecting wallet:', storedAddress);
+          setWalletAddress(storedAddress);
+          setIsLoggedIn(true);
+        } else {
+          // Stored address is not connected, clear it
+          localStorage.removeItem('walletAddress');
+        }
+      } catch (error) {
+        console.error('Error auto-reconnecting wallet:', error);
+        // Clear stored address on error
+        localStorage.removeItem('walletAddress');
+      }
+    };
+
+    reconnectWallet();
+  }, []);
+
+  // Listen for MetaMask account changes
+  useEffect(() => {
+    if (typeof window.ethereum === 'undefined') {
+      return;
+    }
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        // User disconnected wallet
+        console.log('🔌 Wallet disconnected');
+        handleLogout();
+      } else if (accounts[0].toLowerCase() !== walletAddress?.toLowerCase()) {
+        // User switched accounts
+        console.log('🔄 Account changed:', accounts[0]);
+        handleLogin(accounts[0]);
+      }
+    };
+
+    const handleChainChanged = () => {
+      // Reload page on chain change to ensure proper network state
+      window.location.reload();
+    };
+
+    // Listen for account changes
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+
+    return () => {
+      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      window.ethereum.removeListener('chainChanged', handleChainChanged);
+    };
+  }, [walletAddress]);
+
   // Set contract address on mount
   useEffect(() => {
     if (CONTRACT_ADDRESS) {
@@ -512,12 +586,16 @@ const App: React.FC = () => {
     setWalletAddress(address);
     setIsLoggedIn(true);
     setConnectModalOpen(false);
+    // Store wallet address in localStorage for persistence
+    localStorage.setItem('walletAddress', address);
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setWalletAddress(null);
     setView('DASHBOARD'); // Reset view on logout
+    // Clear stored wallet address
+    localStorage.removeItem('walletAddress');
   };
 
   const handleBet = async (amount: number, position: 'YES' | 'NO') => {
