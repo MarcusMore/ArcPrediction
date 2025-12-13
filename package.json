@@ -1,0 +1,56 @@
+{
+  "name": "web3-project",
+  "version": "1.0.0",
+  "description": "Decentralized betting platform on Arc Testnet",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile 2>&1 | Where-Object { $_ -notmatch 'Assertion failed' }",
+    "compile:quiet": "hardhat compile 2>$null",
+    "test": "hardhat test",
+    "test-config": "hardhat run scripts/test-config.ts --network arcTestnet",
+    "deploy": "hardhat run scripts/deploy.ts --network arcTestnet",
+    "create-scenario": "hardhat run scripts/createScenario.ts --network arcTestnet",
+    "create-default-scenarios": "hardhat run scripts/createDefaultScenarios.ts --network arcTestnet",
+    "transfer-ownership": "hardhat run scripts/transferOwnership.ts --network arcTestnet",
+    "add-owner-as-admin": "hardhat run scripts/addOwnerAsAdmin.ts --network arcTestnet",
+    "resolve-scenario": "hardhat run scripts/resolveScenario.ts --network arcTestnet",
+    "test-all": "hardhat run scripts/testAll.ts --network arcTestnet",
+    "qa-test": "hardhat run scripts/qaTest.ts --network arcTestnet",
+    "create-e2e-scenarios": "hardhat run scripts/createE2ETestScenarios.ts --network arcTestnet",
+    "load-test": "hardhat run scripts/loadTest.ts --network arcTestnet",
+    "verify-contract": "hardhat run scripts/verifyContract.ts --network arcTestnet",
+    "list-scenarios": "hardhat run scripts/listScenarios.ts --network arcTestnet",
+    "node": "hardhat node",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "blockchain",
+    "betting",
+    "arc",
+    "usdc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "hardhat": "^2.22.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "d3": "^7.9.0",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0",
+    "framer-motion": "^12.23.25",
+    "lucide-react": "^0.556.0",
+    "openai": "^4.104.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "recharts": "^3.5.1"
+  }
+}
