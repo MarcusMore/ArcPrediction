@@ -301,8 +301,11 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
     console.log('🎲 Attempting to spin...');
     
     // First, try to call the function statically to get revert reason
+    // Note: staticCall might not be available in all versions, so we'll skip if it fails
     try {
-      await contractWithSigner.spin.staticCall();
+      if (contractWithSigner.spin.staticCall) {
+        await contractWithSigner.spin.staticCall();
+      }
     } catch (staticError: any) {
       console.error('❌ Static call failed:', staticError);
       // Extract revert reason from static call error
@@ -316,11 +319,9 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
           const decoded = iface.parseError(staticError.data);
           throw new Error(decoded?.name || 'Contract revert');
         } catch {
-          // If we can't decode, throw with generic message
-          throw new Error('Contract revert: ' + (staticError.message || 'Unknown error'));
+          // If we can't decode, continue to gas estimation
+          console.warn('⚠️ Could not decode static call error, continuing to gas estimation');
         }
-      } else {
-        throw staticError;
       }
     }
     
@@ -381,6 +382,13 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
     // Parse error to get revert reason
     let errorMessage = 'Failed to spin roulette';
     
+    // Check for rate limiting first
+    if (error.code === -32005 || error.message?.includes('rate limited') || error.message?.includes('rate limit')) {
+      errorMessage = 'RPC rate limit exceeded. Please wait a few seconds and try again.';
+      console.error('⚠️ Rate limit error:', error);
+      throw new Error(errorMessage);
+    }
+    
     if (error.reason) {
       errorMessage = error.reason;
     } else if (error.data?.message) {
@@ -409,15 +417,31 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
       } else if (msg.includes('user rejected') || msg.includes('User denied')) {
         errorMessage = 'Transaction was cancelled.';
         throw new Error(errorMessage);
+      } else if (msg.includes('rate limited') || msg.includes('rate limit') || error.code === -32005) {
+        errorMessage = 'RPC rate limit exceeded. Please wait a few seconds and try again.';
       } else {
         // Try to extract revert reason from error message
         const revertMatch = msg.match(/revert(ed)?\s+"?([^"]+)"?/i) || 
-                          msg.match(/reason:\s*"?([^"]+)"?/i);
-        if (revertMatch && revertMatch[2]) {
-          errorMessage = revertMatch[2];
+                          msg.match(/reason:\s*"?([^"]+)"?/i) ||
+                          msg.match(/execution reverted:?\s*"?([^"]+)"?/i);
+        if (revertMatch && (revertMatch[2] || revertMatch[1])) {
+          errorMessage = revertMatch[2] || revertMatch[1];
+        } else {
+          // If we can't extract, provide more context
+          errorMessage = `Transaction reverted. Check console for details. Original error: ${msg.substring(0, 200)}`;
         }
       }
     }
+    
+    // Log full error for debugging
+    console.error('❌ Full error object:', {
+      error,
+      message: errorMessage,
+      reason: error.reason,
+      data: error.data,
+      code: error.code,
+      stack: error.stack,
+    });
     
     throw new Error(errorMessage);
   }
