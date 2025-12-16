@@ -13,7 +13,8 @@ import {
   setRouletteContractAddress,
   getRouletteContractAddress,
   isRouletteReady,
-  canUserSpin
+  canUserSpin,
+  getExtraSpinCost
 } from '../../services/rouletteService';
 import { getUSDCBalance, formatUSDC } from '../../lib/web3';
 import { CONTRACT_ADDRESS, USDC_ADDRESS, ROULETTE_CONTRACT_ADDRESS } from '../../constants';
@@ -37,6 +38,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
   const [contractNotSet, setContractNotSet] = useState<boolean>(false);
   const [rouletteReady, setRouletteReady] = useState<{ ready: boolean; reason?: string }>({ ready: false });
   const [canSpin, setCanSpin] = useState<{ canSpin: boolean; timeRemaining: number; message?: string }>({ canSpin: true, timeRemaining: 0 });
+  const [extraSpinCost, setExtraSpinCost] = useState<number>(5);
 
   // Initialize contract address
   useEffect(() => {
@@ -60,12 +62,13 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
           return;
         }
 
-        const [pool, cost, tiers, rouletteStats, ready] = await Promise.all([
+        const [pool, cost, tiers, rouletteStats, ready, extraCost] = await Promise.all([
           getPrizePool(),
           getSpinCost(),
           getAllPrizeTiers(),
           getRouletteStats(),
           isRouletteReady(),
+          getExtraSpinCost(),
         ]);
 
         setPrizePool(pool);
@@ -73,6 +76,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
         setPrizeTiers(tiers);
         setStats(rouletteStats);
         setRouletteReady(ready);
+        setExtraSpinCost(extraCost);
 
         // Check if user can spin
         if (walletAddress) {
@@ -113,8 +117,15 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
     }
 
     if (isSpinning) return;
-    if (balance < spinCost) {
-      alert(`Insufficient balance. You need ${spinCost} USDC to spin.`);
+    
+    // Calculate total cost (if needs extra spin, it's just 5 USDC, otherwise normal spin cost)
+    const totalCost = canSpin.canSpin ? spinCost : extraSpinCost;
+    
+    if (balance < totalCost) {
+      const costMessage = canSpin.canSpin 
+        ? `Insufficient balance. You need ${spinCost.toFixed(2)} USDC to spin.`
+        : `Insufficient balance. You need ${extraSpinCost.toFixed(2)} USDC to spin again.`;
+      alert(costMessage);
       return;
     }
 
@@ -353,7 +364,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
               <Button
                 size="lg"
                 onClick={handleSpin}
-                disabled={isSpinning || !walletAddress || balance < spinCost || !rouletteReady.ready || !canSpin.canSpin}
+                disabled={isSpinning || !walletAddress || balance < (canSpin.canSpin ? spinCost : extraSpinCost) || !rouletteReady.ready}
                 className="min-w-[200px] h-14 text-lg font-bold"
               >
                 {isSpinning ? (
@@ -370,7 +381,11 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
                 ) : (
                   <>
                     <Sparkles className="mr-2" size={20} />
-                    Spin ({spinCost.toFixed(2)} USDC)
+                    {canSpin.canSpin ? (
+                      <>Spin ({spinCost.toFixed(2)} USDC)</>
+                    ) : (
+                      <>Spin Again ({extraSpinCost.toFixed(2)} USDC)</>
+                    )}
                   </>
                 )}
               </Button>
@@ -378,24 +393,30 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
               {!walletAddress && (
                 <p className="text-sm text-white/50 mt-4">Connect wallet to play</p>
               )}
-              {walletAddress && balance < spinCost && (
+              {walletAddress && balance < (canSpin.canSpin ? spinCost : extraSpinCost) && (
                 <p className="text-sm text-red-400 mt-4">
-                  Insufficient balance. Need {spinCost.toFixed(2)} USDC
+                  Insufficient balance. Need {canSpin.canSpin ? spinCost.toFixed(2) : extraSpinCost.toFixed(2)} USDC
                 </p>
               )}
-              {walletAddress && balance >= spinCost && !canSpin.canSpin && canSpin.message && (
-                <p className="text-sm text-yellow-400 mt-4 max-w-md text-center">
-                  {canSpin.message}
-                </p>
+              {walletAddress && balance >= (canSpin.canSpin ? spinCost : extraSpinCost) && !canSpin.canSpin && canSpin.message && (
+                <div className="text-sm text-yellow-400 mt-4 max-w-md text-center space-y-1">
+                  <p>{canSpin.message}</p>
+                  <p className="text-xs text-white/60">Or pay {extraSpinCost.toFixed(2)} USDC to spin again now</p>
+                </div>
               )}
-              {walletAddress && balance >= spinCost && canSpin.canSpin && !rouletteReady.ready && rouletteReady.reason && (
+              {walletAddress && balance >= (canSpin.canSpin ? spinCost : extraSpinCost) && canSpin.canSpin && !rouletteReady.ready && rouletteReady.reason && (
                 <p className="text-sm text-yellow-400 mt-4 max-w-md text-center">
                   {rouletteReady.reason}
                 </p>
               )}
-              {walletAddress && balance >= spinCost && canSpin.canSpin && rouletteReady.ready && (
+              {walletAddress && balance >= (canSpin.canSpin ? spinCost : extraSpinCost) && canSpin.canSpin && rouletteReady.ready && (
                 <p className="text-sm text-green-400 mt-4">
-                  ✓ Ready to spin! (1 spin per day)
+                  ✓ Ready to spin! (1 free spin per day)
+                </p>
+              )}
+              {walletAddress && balance >= (canSpin.canSpin ? spinCost : extraSpinCost) && !canSpin.canSpin && rouletteReady.ready && (
+                <p className="text-sm text-blue-400 mt-4">
+                  💎 Extra spin available for {extraSpinCost.toFixed(2)} USDC
                 </p>
               )}
             </div>
@@ -410,22 +431,38 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
               Prize Tiers
             </h3>
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
-              {prizeTiers.map((tier, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-white">{tier.name}</div>
-                    <div className="text-sm text-white/50">
-                      {getProbabilityPercent(tier.probability)}% chance
+              {prizeTiers.map((tier, index) => {
+                const isAvailable = tier.available !== false; // Default to true if not set
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                      isAvailable 
+                        ? 'bg-white/5 hover:bg-white/10' 
+                        : 'bg-red-500/10 opacity-50 border border-red-500/20'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className={`font-medium ${isAvailable ? 'text-white' : 'text-white/40 line-through'}`}>
+                          {tier.name}
+                        </div>
+                        {!isAvailable && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
+                            Unavailable
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-sm ${isAvailable ? 'text-white/50' : 'text-white/30'}`}>
+                        {getProbabilityPercent(tier.probability)}% chance
+                      </div>
+                    </div>
+                    <div className={`text-lg font-mono font-bold ${isAvailable ? 'text-secondary' : 'text-white/30'}`}>
+                      {tier.amount > 0 ? `${tier.amount.toFixed(2)} USDC` : 'Nothing'}
                     </div>
                   </div>
-                  <div className="text-lg font-mono font-bold text-secondary">
-                    {tier.amount > 0 ? `${tier.amount.toFixed(2)} USDC` : 'Nothing'}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </GlassCard>
         </div>

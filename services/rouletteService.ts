@@ -17,9 +17,23 @@ export const ROULETTE_ABI = [
   'function getTimeUntilNextSpin(address _user) external view returns (uint256)',
   'function canUserSpin(address _user) external view returns (bool canSpin, uint256 timeRemaining)',
   'function lastSpinTime(address) external view returns (uint256)',
+  'function getAvailablePrizeTiers() external view returns (tuple(uint256 amount, uint256 probability, string name)[] availableTiers, uint256[] availableProbabilities)',
+  'function isPrizeTierAvailable(uint256 _tierIndex) external view returns (bool isAvailable)',
   'event SpinExecuted(address indexed player, uint256 spinResult, uint256 prizeWon, string prizeName)',
   'event PrizePoolFunded(address indexed funder, uint256 amount)',
+  'event ExtraSpinUsed(address indexed player, uint256 extraCost, uint256 adminFee, uint256 prizePoolAmount)',
 ];
+
+/**
+ * Get extra spin cost
+ * EXTRA_SPIN_COST is a constant (5 USDC) defined in the contract
+ * If the contract function is not available (old deployment), return the constant value
+ */
+export async function getExtraSpinCost(): Promise<number> {
+  // EXTRA_SPIN_COST is always 5 USDC (constant in contract)
+  // Return directly without calling contract to avoid errors with old deployments
+  return 5;
+}
 
 /**
  * Check if roulette contract is ready (has prize pool and is not paused)
@@ -90,20 +104,6 @@ export async function canUserSpin(userAddress: string): Promise<{ canSpin: boole
   }
 }
 
-/**
- * Get time until next spin for user
- */
-export async function getTimeUntilNextSpin(userAddress: string): Promise<number> {
-  try {
-    const contract = getRouletteContract();
-    const timeRemaining = await contract.getTimeUntilNextSpin(userAddress);
-    return Number(timeRemaining);
-  } catch (error) {
-    console.error('Error getting time until next spin:', error);
-    return 0;
-  }
-}
-
 let rouletteContractAddress: string | null = null;
 
 /**
@@ -167,17 +167,53 @@ export interface PrizeTier {
   amount: number;
   probability: number;
   name: string;
+  available?: boolean; // Whether this tier can be paid with current prize pool
 }
 
 export async function getAllPrizeTiers(): Promise<PrizeTier[]> {
   const contract = getRouletteContract();
-  const tiers = await contract.getAllPrizeTiers();
+  const [tiers, prizePool] = await Promise.all([
+    contract.getAllPrizeTiers(),
+    contract.getPrizePool(),
+  ]);
   
-  return tiers.map((tier: any) => ({
-    amount: parseFloat(formatUSDC(tier.amount)),
-    probability: Number(tier.probability),
-    name: tier.name,
-  }));
+  const poolAmount = parseFloat(formatUSDC(prizePool));
+  
+  return tiers.map((tier: any) => {
+    const amount = parseFloat(formatUSDC(tier.amount));
+    return {
+      amount: amount,
+      probability: Number(tier.probability),
+      name: tier.name,
+      available: amount === 0 || poolAmount >= amount, // "Nothing" tier is always available
+    };
+  });
+}
+
+/**
+ * Get available prize tiers (tiers that can be paid)
+ */
+export async function getAvailablePrizeTiers(): Promise<{ tiers: PrizeTier[]; probabilities: number[] }> {
+  const contract = getRouletteContract();
+  const [availableTiers, availableProbabilities] = await contract.getAvailablePrizeTiers();
+  
+  return {
+    tiers: availableTiers.map((tier: any) => ({
+      amount: parseFloat(formatUSDC(tier.amount)),
+      probability: Number(tier.probability),
+      name: tier.name,
+      available: true, // All returned tiers are available
+    })),
+    probabilities: availableProbabilities.map((prob: any) => Number(prob)),
+  };
+}
+
+/**
+ * Check if a prize tier is available
+ */
+export async function isPrizeTierAvailable(tierIndex: number): Promise<boolean> {
+  const contract = getRouletteContract();
+  return await contract.isPrizeTierAvailable(tierIndex);
 }
 
 /**
@@ -191,27 +227,156 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
   const signer = await getSigner();
   const userAddress = await signer.getAddress();
   
-  // Get spin cost
-  const spinCost = await getSpinCost();
+  // Get spin cost and check if user needs extra spin
+  const contract = getRouletteContract();
+  const [spinCost, canSpin, prizePool, contractPaused] = await Promise.all([
+    getSpinCost(),
+    canUserSpin(userAddress),
+    getPrizePool(),
+    isPaused(),
+  ]);
+  
+  // Pre-flight checks
+  if (prizePool <= 0) {
+    throw new Error('Prize pool is empty. Please wait for the admin to fund it.');
+  }
+  
+  if (contractPaused) {
+    throw new Error('Roulette is currently paused. Please try again later.');
+  }
+  
+  if (spinCost <= 0) {
+    throw new Error('Spin cost is not configured. Please contact admin.');
+  }
+  
   const spinCostWei = parseUSDC(spinCost.toString());
+  const extraSpinCost = 5; // 5 USDC
+  const extraSpinCostWei = parseUSDC(extraSpinCost.toString());
+  
+  // If user needs extra spin, total cost is just the extra spin cost (5 USDC)
+  // Otherwise, it's the normal spin cost
+  const totalCost = canSpin.canSpin ? spinCost : extraSpinCost;
+  const totalCostWei = canSpin.canSpin ? spinCostWei : extraSpinCostWei;
+  
+  console.log('🎰 Spin Debug:', {
+    canSpin: canSpin.canSpin,
+    timeRemaining: canSpin.timeRemaining,
+    spinCost: spinCost,
+    extraSpinCost: extraSpinCost,
+    totalCost: totalCost,
+    totalCostWei: totalCostWei.toString(),
+    needsExtraSpin: !canSpin.canSpin,
+  });
   
   // Check and approve USDC if needed
+  // For extra spin, we need to approve 5 USDC
+  // For normal spin, we need to approve spinCost
   const allowance = await getUSDCAllowance(userAddress, rouletteContractAddress);
-  if (allowance < spinCostWei) {
-    // Approve a larger amount (e.g., 10x the spin cost)
-    const approveTx = await approveUSDC(rouletteContractAddress, spinCostWei * 10n);
+  
+  console.log('💰 Allowance Debug:', {
+    currentAllowance: formatUSDC(allowance),
+    needed: formatUSDC(totalCostWei),
+    needsApproval: allowance < totalCostWei,
+  });
+  
+  // Approve the exact amount needed
+  // For extra spin: 5 USDC, for normal spin: spinCost
+  if (allowance < totalCostWei) {
+    console.log('✅ Approving', formatUSDC(totalCostWei), 'USDC');
+    const approveTx = await approveUSDC(rouletteContractAddress, totalCostWei);
     await approveTx.wait();
+    console.log('✅ Approval confirmed');
   }
+  
+  // Important: The contract should handle extra spin payment automatically
+  // If the contract doesn't support extra spin (old version), it will revert
+  // with an error that we'll catch and display to the user
 
   // Execute spin
-  const contract = await getRouletteContractWithSigner();
+  const contractWithSigner = await getRouletteContractWithSigner();
   
   // Try to estimate gas first to catch revert reasons
   let tx;
   try {
+    console.log('🎲 Attempting to spin...');
+    
+    // First, try to call the function statically to get revert reason
+    try {
+      await contractWithSigner.spin.staticCall();
+    } catch (staticError: any) {
+      console.error('❌ Static call failed:', staticError);
+      // Extract revert reason from static call error
+      if (staticError.reason) {
+        throw new Error(staticError.reason);
+      } else if (staticError.data) {
+        // Try to decode error data
+        try {
+          const contract = getRouletteContract();
+          const iface = contract.interface;
+          const decoded = iface.parseError(staticError.data);
+          throw new Error(decoded?.name || 'Contract revert');
+        } catch {
+          // If we can't decode, throw with generic message
+          throw new Error('Contract revert: ' + (staticError.message || 'Unknown error'));
+        }
+      } else {
+        throw staticError;
+      }
+    }
+    
     // Estimate gas to catch revert reasons before sending
-    await contract.spin.estimateGas();
-    tx = await contract.spin();
+    try {
+      const gasEstimate = await contractWithSigner.spin.estimateGas();
+      console.log('⛽ Gas estimate:', gasEstimate.toString());
+    } catch (estimateError: any) {
+      // If gas estimation fails, try to extract the revert reason
+      console.error('❌ Gas estimation failed:', estimateError);
+      let revertReason = 'Unknown error';
+      
+      // Try to decode the revert reason
+      if (estimateError.reason) {
+        revertReason = estimateError.reason;
+      } else if (estimateError.data) {
+        // Try to decode error data using the contract interface
+        try {
+          const contract = getRouletteContract();
+          const iface = contract.interface;
+          // Try to parse as error
+          try {
+            const decoded = iface.parseError(estimateError.data);
+            revertReason = decoded?.name || 'Contract revert';
+          } catch {
+            // If parseError fails, try to extract from error message
+            if (estimateError.message) {
+              const msg = estimateError.message;
+              if (msg.includes('Prize pool is empty')) {
+                revertReason = 'Prize pool is empty';
+              } else if (msg.includes('Extra spin cost transfer failed') || msg.includes('extra spin cost transfer failed')) {
+                revertReason = 'Extra spin payment failed. Check balance and approval (need 5 USDC)';
+              } else if (msg.includes('Spin cost transfer failed')) {
+                revertReason = 'Spin cost transfer failed. Check balance and approval';
+              } else if (msg.includes('Spin cost not set')) {
+                revertReason = 'Spin cost is not configured';
+              } else if (msg.includes('Insufficient prize pool')) {
+                revertReason = 'Insufficient prize pool';
+              } else {
+                revertReason = msg;
+              }
+            }
+          }
+        } catch {
+          // If we can't decode, use the error message
+          revertReason = estimateError.message || 'Contract revert';
+        }
+      } else if (estimateError.message) {
+        revertReason = estimateError.message;
+      }
+      
+      throw new Error(revertReason);
+    }
+    
+    tx = await contractWithSigner.spin();
+    console.log('📝 Transaction sent:', tx.hash);
   } catch (error: any) {
     // Parse error to get revert reason
     let errorMessage = 'Failed to spin roulette';
@@ -226,12 +391,21 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
       // Check for specific error patterns
       if (msg.includes('Prize pool is empty') || msg.includes('prize pool is empty')) {
         errorMessage = 'Prize pool is empty. Please wait for the admin to fund it.';
+      } else if (msg.includes('Extra spin cost transfer failed') || msg.includes('extra spin cost transfer failed')) {
+        errorMessage = 'Extra spin payment failed. Please check your balance and approval (need 5 USDC).';
+      } else if (msg.includes('Extra spin cost transfer failed') || msg.includes('extra spin cost transfer failed')) {
+        errorMessage = 'Extra spin payment failed. Please check your balance and approval (need 5 USDC).';
       } else if (msg.includes('Spin cost transfer failed') || msg.includes('transfer failed')) {
         errorMessage = 'Token transfer failed. Please check your balance and approval.';
       } else if (msg.includes('Spin cost not set')) {
         errorMessage = 'Spin cost is not configured. Please contact admin.';
       } else if (msg.includes('Insufficient prize pool')) {
         errorMessage = 'Insufficient prize pool. Please wait for the admin to add more funds.';
+      } else if (msg.includes('You can only spin once per day') || msg.includes('wait 24 hours')) {
+        // This error should not happen when paying extra spin cost
+        // It means the contract doesn't support extra spin (old version)
+        // Or the contract logic is blocking the spin
+        errorMessage = 'The contract may not support extra spins. Please wait 24 hours or contact support.';
       } else if (msg.includes('user rejected') || msg.includes('User denied')) {
         errorMessage = 'Transaction was cancelled.';
         throw new Error(errorMessage);

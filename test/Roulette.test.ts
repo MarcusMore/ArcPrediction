@@ -223,14 +223,32 @@ describe("Roulette", function () {
       ).to.emit(roulette, "SpinExecuted");
     });
 
-    it("Should prevent second spin within 24 hours", async function () {
+    it("Should allow extra spin by paying 5 USDC", async function () {
       // First spin
       await roulette.connect(user1).spin();
 
-      // Try to spin again immediately
+      // Try to spin again immediately with extra payment
+      // Should succeed because user pays EXTRA_SPIN_COST
+      const initialBalance = await prizeToken.balanceOf(user1.address);
+      const initialPrizePool = await roulette.getPrizePool();
+      
+      // Approve extra spin cost
+      await prizeToken.connect(user1).approve(await roulette.getAddress(), SPIN_COST * 10n);
+      
       await expect(
         roulette.connect(user1).spin()
-      ).to.be.revertedWith("You can only spin once per day. Please wait 24 hours.");
+      )
+        .to.emit(roulette, "ExtraSpinUsed")
+        .withArgs(user1.address, ethers.parseUnits("5", USDC_DECIMALS));
+
+      const finalBalance = await prizeToken.balanceOf(user1.address);
+      const finalPrizePool = await roulette.getPrizePool();
+      
+      // User should have paid 5 USDC
+      expect(initialBalance - finalBalance).to.equal(ethers.parseUnits("5", USDC_DECIMALS));
+      
+      // Prize pool should have increased by 5 USDC (from extra spin payment)
+      expect(finalPrizePool - initialPrizePool).to.equal(ethers.parseUnits("5", USDC_DECIMALS));
     });
 
     it("Should allow spin after 24 hours", async function () {

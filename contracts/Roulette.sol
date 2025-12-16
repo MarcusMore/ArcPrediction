@@ -31,6 +31,9 @@ contract Roulette is Ownable, Pausable, ReentrancyGuard {
     // Minimum spin cost (entry fee)
     uint256 public spinCost;
     
+    // Extra spin cost (to spin again before 24h)
+    uint256 public constant EXTRA_SPIN_COST = 5 * 10**6; // 5 USDC
+    
     // Prize pool balance
     uint256 public prizePool;
     
@@ -48,6 +51,7 @@ contract Roulette is Ownable, Pausable, ReentrancyGuard {
     event SpinExecuted(address indexed player, uint256 spinResult, uint256 prizeWon, string prizeName);
     event PrizeTierUpdated(uint256 indexed tierIndex, uint256 amount, uint256 probability, string name);
     event SpinCostUpdated(uint256 newCost);
+    event ExtraSpinUsed(address indexed player, uint256 extraCost, uint256 adminFee, uint256 prizePoolAmount);
     
     constructor(address _prizeToken, uint256 _spinCost) Ownable(msg.sender) {
         require(_prizeToken != address(0), "Invalid token address");
@@ -126,7 +130,7 @@ contract Roulette is Ownable, Pausable, ReentrancyGuard {
     /**
      * @dev Spin the roulette and win a prize
      * User must pay spinCost to play
-     * Users can only spin once per day (24 hours)
+     * Users can only spin once per day (24 hours) unless using extra spin
      */
     function spin() external whenNotPaused nonReentrant {
         require(spinCost > 0, "Spin cost not set");
@@ -134,13 +138,41 @@ contract Roulette is Ownable, Pausable, ReentrancyGuard {
         
         // Check if user has already spun today
         uint256 lastSpin = lastSpinTime[msg.sender];
-        require(
-            lastSpin == 0 || block.timestamp >= lastSpin + SPIN_COOLDOWN,
-            "You can only spin once per day. Please wait 24 hours."
-        );
+        bool needsExtraSpin = lastSpin > 0 && block.timestamp < lastSpin + SPIN_COOLDOWN;
         
-        // Transfer spin cost from user
-        require(prizeToken.transferFrom(msg.sender, address(this), spinCost), "Spin cost transfer failed");
+        if (needsExtraSpin) {
+            // User needs to pay only extra spin cost (5 USDC)
+            require(
+                prizeToken.transferFrom(msg.sender, address(this), EXTRA_SPIN_COST),
+                "Extra spin cost transfer failed"
+            );
+            // 10% of extra spin cost goes to admin, 90% goes to prize pool
+            uint256 adminFee = (EXTRA_SPIN_COST * 10) / 100; // 10% = 0.5 USDC
+            uint256 prizePoolAmount = EXTRA_SPIN_COST - adminFee; // 90% = 4.5 USDC
+            
+            // Transfer admin fee to owner (only if adminFee > 0 and owner is valid)
+            address ownerAddress = owner();
+            if (adminFee > 0 && ownerAddress != address(0) && ownerAddress != address(this) && ownerAddress != msg.sender) {
+                // Try to transfer admin fee to owner
+                bool transferSuccess = prizeToken.transfer(ownerAddress, adminFee);
+                if (!transferSuccess) {
+                    // If transfer fails, add to prize pool instead
+                    prizePoolAmount += adminFee;
+                    adminFee = 0; // Reset admin fee since it wasn't transferred
+                }
+            } else if (adminFee > 0) {
+                // If owner is invalid or same as sender, add to prize pool instead
+                prizePoolAmount += adminFee;
+                adminFee = 0; // Reset admin fee since it wasn't transferred
+            }
+            
+            // Add remaining amount to prize pool
+            prizePool += prizePoolAmount;
+            emit ExtraSpinUsed(msg.sender, EXTRA_SPIN_COST, adminFee, prizePoolAmount);
+        } else {
+            // Normal spin - just pay spin cost
+            require(prizeToken.transferFrom(msg.sender, address(this), spinCost), "Spin cost transfer failed");
+        }
         
         // Generate random number (0-9999) using block data
         uint256 randomValue = uint256(keccak256(abi.encodePacked(
@@ -152,19 +184,58 @@ contract Roulette is Ownable, Pausable, ReentrancyGuard {
         ))) % TOTAL_PROBABILITY;
         
         // Determine which prize tier was won
+        // Only consider tiers that can be paid (prize pool >= tier amount)
+        // First, calculate total available probability
+        uint256 totalAvailableProbability = 0;
+        for (uint256 i = 0; i < prizeTiers.length; i++) {
+            PrizeTier memory tier = prizeTiers[i];
+            // Include tier if it's "Nothing" (amount = 0) or if prize pool >= tier amount
+            if (tier.amount == 0 || prizePool >= tier.amount) {
+                totalAvailableProbability += tier.probability;
+            }
+        }
+        
+        // If no tiers are available (shouldn't happen as "Nothing" is always available), default to "Nothing"
+        if (totalAvailableProbability == 0) {
+            totalAvailableProbability = prizeTiers[0].probability;
+        }
+        
+        // Normalize random value to available probability range
+        uint256 normalizedRandom = (randomValue * totalAvailableProbability) / TOTAL_PROBABILITY;
+        
+        // Find winning tier from available tiers only
         uint256 cumulativeProbability = 0;
         uint256 winningTierIndex = 0;
+        bool tierFound = false;
         
         for (uint256 i = 0; i < prizeTiers.length; i++) {
-            cumulativeProbability += prizeTiers[i].probability;
-            if (randomValue < cumulativeProbability) {
+            PrizeTier memory tier = prizeTiers[i];
+            // Skip tiers that cannot be paid (prize pool insufficient)
+            if (tier.amount > 0 && prizePool < tier.amount) {
+                continue; // Skip this tier
+            }
+            
+            cumulativeProbability += tier.probability;
+            if (normalizedRandom < cumulativeProbability) {
                 winningTierIndex = i;
+                tierFound = true;
                 break;
             }
         }
         
+        // Fallback: if no tier found, default to "Nothing"
+        if (!tierFound) {
+            winningTierIndex = 0;
+        }
+        
         PrizeTier memory winningTier = prizeTiers[winningTierIndex];
         uint256 prizeAmount = winningTier.amount;
+        
+        // Final safety check: if prize amount is greater than pool, force to "Nothing"
+        if (prizeAmount > 0 && prizePool < prizeAmount) {
+            prizeAmount = 0; // Force "Nothing" if pool is insufficient
+            winningTier = prizeTiers[0]; // Use "Nothing" tier
+        }
         
         // Update statistics
         totalSpins++;
@@ -182,8 +253,12 @@ contract Roulette is Ownable, Pausable, ReentrancyGuard {
             // Transfer prize to winner
             require(prizeToken.transfer(msg.sender, prizeAmount), "Prize transfer failed");
         } else {
-            // If user wins "Nothing", add spin cost to prize pool
-            prizePool += spinCost;
+            // If user wins "Nothing", add payment to prize pool
+            // If it was extra spin, EXTRA_SPIN_COST was already added to pool
+            // If it was normal spin, add spinCost to pool
+            if (!needsExtraSpin) {
+                prizePool += spinCost;
+            }
         }
         
         emit SpinExecuted(msg.sender, randomValue, prizeAmount, winningTier.name);
@@ -194,6 +269,57 @@ contract Roulette is Ownable, Pausable, ReentrancyGuard {
      */
     function getAllPrizeTiers() external view returns (PrizeTier[] memory) {
         return prizeTiers;
+    }
+    
+    /**
+     * @dev Get available prize tiers (tiers that can be paid with current prize pool)
+     * @return availableTiers Array of prize tiers that can be paid
+     * @return availableProbabilities Array of probabilities for available tiers
+     */
+    function getAvailablePrizeTiers() external view returns (PrizeTier[] memory availableTiers, uint256[] memory availableProbabilities) {
+        uint256 availableCount = 0;
+        
+        // First pass: count available tiers
+        for (uint256 i = 0; i < prizeTiers.length; i++) {
+            PrizeTier memory tier = prizeTiers[i];
+            // "Nothing" tier (amount = 0) is always available
+            // Other tiers are available only if prize pool >= tier amount
+            if (tier.amount == 0 || prizePool >= tier.amount) {
+                availableCount++;
+            }
+        }
+        
+        // Second pass: build arrays
+        availableTiers = new PrizeTier[](availableCount);
+        availableProbabilities = new uint256[](availableCount);
+        uint256 index = 0;
+        
+        for (uint256 i = 0; i < prizeTiers.length; i++) {
+            PrizeTier memory tier = prizeTiers[i];
+            if (tier.amount == 0 || prizePool >= tier.amount) {
+                availableTiers[index] = tier;
+                availableProbabilities[index] = tier.probability;
+                index++;
+            }
+        }
+        
+        return (availableTiers, availableProbabilities);
+    }
+    
+    /**
+     * @dev Check if a prize tier is available (can be paid)
+     * @param _tierIndex Index of the prize tier
+     * @return isAvailable True if tier can be paid, false otherwise
+     */
+    function isPrizeTierAvailable(uint256 _tierIndex) external view returns (bool isAvailable) {
+        require(_tierIndex < prizeTiers.length, "Invalid tier index");
+        PrizeTier memory tier = prizeTiers[_tierIndex];
+        // "Nothing" tier is always available
+        if (tier.amount == 0) {
+            return true;
+        }
+        // Other tiers are available only if prize pool >= tier amount
+        return prizePool >= tier.amount;
     }
     
     /**
