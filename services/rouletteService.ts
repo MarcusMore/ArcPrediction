@@ -292,8 +292,30 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
   // If the contract doesn't support extra spin (old version), it will revert
   // with an error that we'll catch and display to the user
 
-  // Execute spin
+  // Execute spin with retry logic for rate limiting
   const contractWithSigner = await getRouletteContractWithSigner();
+  
+  // Retry function for rate limiting
+  const retryWithBackoff = async (fn: () => Promise<any>, maxRetries = 3, delay = 2000): Promise<any> => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        const isRateLimit = error.code === -32005 || 
+                           error.message?.includes('rate limited') || 
+                           error.message?.includes('rate limit') ||
+                           error.data?.httpStatus === 429;
+        
+        if (isRateLimit && i < maxRetries - 1) {
+          const waitTime = delay * Math.pow(2, i); // Exponential backoff
+          console.warn(`⚠️ Rate limited, retrying in ${waitTime}ms... (attempt ${i + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        throw error;
+      }
+    }
+  };
   
   // Try to estimate gas first to catch revert reasons
   let tx;
@@ -376,7 +398,11 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
       throw new Error(revertReason);
     }
     
-    tx = await contractWithSigner.spin();
+    // Execute spin with retry for rate limiting
+    tx = await retryWithBackoff(async () => {
+      const transaction = await contractWithSigner.spin();
+      return transaction;
+    });
     console.log('📝 Transaction sent:', tx.hash);
   } catch (error: any) {
     // Parse error to get revert reason
