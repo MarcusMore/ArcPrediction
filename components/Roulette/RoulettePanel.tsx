@@ -129,14 +129,23 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
       return;
     }
 
-    setIsSpinning(true);
     setShowResult(false);
     setLastResult(null);
 
     try {
+      // Execute spin transaction first (payment happens here)
       const result = await spin();
+      
+      // Only start animation after payment is confirmed
+      setIsSpinning(true);
+      
+      // Wait for animation to complete (3 seconds)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Show result after animation
       setLastResult({ prize: result.prizeWon, name: result.prizeName });
       setShowResult(true);
+      setIsSpinning(false);
       
       // Refresh data
       const [pool, rouletteStats, spinStatus] = await Promise.all([
@@ -161,12 +170,13 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
         errorMessage = error.reason;
       }
       
+      // Make sure to reset spinning state if error occurs
+      setIsSpinning(false);
+      
       // Don't show alert for user cancellation
       if (!errorMessage.includes('cancelled') && !errorMessage.includes('Transaction was cancelled')) {
         alert(errorMessage);
       }
-    } finally {
-      setIsSpinning(false);
     }
   };
 
