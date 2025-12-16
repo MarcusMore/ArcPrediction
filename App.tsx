@@ -1060,7 +1060,22 @@ const App: React.FC = () => {
 
                     {view === 'PORTFOLIO' && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <h2 className="text-3xl font-display font-bold mb-6">Your Performance</h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-display font-bold">Your Performance</h2>
+                                
+                                {/* Toggle for closed bets */}
+                                <button
+                                    onClick={() => setShowClosedBets(!showClosedBets)}
+                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                                        showClosedBets 
+                                            ? 'bg-white/10 text-white border border-white/20' 
+                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                    }`}
+                                >
+                                    <Filter size={14} />
+                                    {showClosedBets ? 'Hide Closed' : 'Show Closed'}
+                                </button>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                 <GlassCard className="p-6">
                                     <span className="text-sm text-white/50">Total Profit</span>
@@ -1083,7 +1098,14 @@ const App: React.FC = () => {
                                 </GlassCard>
                             </div>
                             <ClaimableBets 
-                                bets={userBets} 
+                                bets={userBets.filter(bet => {
+                                    // Filter closed/resolved bets based on showClosedBets toggle
+                                    const scenario = scenarios.find(s => s.id === bet.scenarioId);
+                                    if (!showClosedBets && scenario && (scenario.isClosed || scenario.isResolved)) {
+                                        return false;
+                                    }
+                                    return true;
+                                })} 
                                 scenarios={scenarios}
                                     onClaimSuccess={async () => {
                                     // Refresh data after claiming
@@ -1127,7 +1149,14 @@ const App: React.FC = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {userBets.map((bet) => {
+                                                {userBets.filter(bet => {
+                                                    // Filter closed/resolved bets based on showClosedBets toggle
+                                                    const scenario = scenarios.find(s => s.id === bet.scenarioId);
+                                                    if (!showClosedBets && scenario && (scenario.isClosed || scenario.isResolved)) {
+                                                        return false;
+                                                    }
+                                                    return true;
+                                                }).map((bet) => {
                                                     const scenario = scenarios.find(s => s.id === bet.scenarioId);
                                                     const isResolved = scenario?.isResolved ?? false;
                                                     const userWon = isResolved && scenario && (
