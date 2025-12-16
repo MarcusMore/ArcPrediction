@@ -451,15 +451,18 @@ The roulette features 9 prize tiers with weighted probabilities:
 
 #### 10.6.2 Visual Feedback
 
-- Prize wheel animation
+- Prize wheel animation with prize labels displayed on each division
+- Prize amounts written on wheel divisions (e.g., "Nothing", "1 USDC", "2 USDC", etc.)
 - Real-time prize pool display
 - Available prize tiers with probabilities
+- Visual indicators for unavailable prize tiers (grayed out)
 - Cooldown timer display
 - Statistics tracking (total spins, prizes won, total prize amount)
+- Animation starts only after payment confirmation
 
 ## 11. Gamification & Social Features
 
-### 10.1 Achievement System
+### 11.1 Achievement System
 
 Forsightt includes a comprehensive gamification system with 30+ achievements across multiple categories:
 
@@ -479,7 +482,7 @@ Forsightt includes a comprehensive gamification system with 30+ achievements acr
 - Completion percentage
 - Visual progress bars
 
-### 10.2 Leaderboard
+### 11.2 Leaderboard
 
 Competitive rankings system for users to compete:
 
@@ -497,7 +500,7 @@ Competitive rankings system for users to compete:
 - Total Wins
 - Longest Streak
 
-### 10.3 Portfolio Management
+### 11.3 Portfolio Management
 
 Comprehensive tracking and analytics:
 
@@ -534,13 +537,15 @@ Comprehensive tracking and analytics:
 ### 12.3 Roulette Panel
 
 **Features:**
-- Interactive prize wheel animation
+- Interactive prize wheel animation with prize labels on each division
 - Prize pool display
 - Available prize tiers with probabilities
+- Visual prize tier indicators (available/unavailable)
 - Spin button with cooldown status
 - Extra spin option (5 USDC)
 - Statistics display
 - Funding panel (admin only)
+- Prize wheel shows all prize amounts (e.g., "Nothing", "1 USDC", "2 USDC", etc.)
 
 ### 12.4 Error Handling
 
@@ -621,7 +626,7 @@ Comprehensive tracking and analytics:
 
 ## 15. Security & Access Control
 
-### 13.1 Access Control System
+### 15.1 Access Control System
 
 **Owner:**
 - Permanent owner address (cannot be changed)
@@ -645,7 +650,7 @@ Comprehensive tracking and analytics:
 - Can view all public data
 - No special privileges
 
-### 13.2 Security Features
+### 15.2 Security Features
 
 **Smart Contract:**
 - ReentrancyGuard on all fund transfers
@@ -706,6 +711,8 @@ For issues, questions, or feedback, please contact the development team.
 - ✅ Improved Error Handling and User Feedback
 - ✅ Enhanced Prize Pool Management
 - ✅ Added Prize Pool Funding from "Nothing" wins
+- ✅ Added Prize Labels on Roulette Wheel Divisions
+- ✅ Animation starts only after payment confirmation
 
 ### Version 1.1 (December 2025)
 - ✅ Added Achievement System (30+ achievements)

@@ -335,7 +335,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
           <GlassCard className="p-8">
             <div className="flex flex-col items-center justify-center min-h-[400px]">
               {/* Roulette Wheel Animation */}
-              <div className="relative w-64 h-64 mb-8">
+              <div className="relative w-80 h-80 mb-8">
                 <motion.div
                   animate={{
                     rotate: isSpinning ? 3600 : 0,
@@ -345,12 +345,78 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
                     ease: "easeOut",
                   }}
                   className="w-full h-full rounded-full border-8 border-primary/30 relative overflow-hidden"
-                  style={{
-                    background: 'conic-gradient(from 0deg, #ff0000 0deg 40deg, #000000 40deg 80deg, #ff0000 80deg 120deg, #000000 120deg 160deg, #ff0000 160deg 200deg, #000000 200deg 240deg, #ff0000 240deg 280deg, #000000 280deg 320deg, #ff0000 320deg 360deg)',
-                  }}
                 >
+                  {/* Prize Tiers on Wheel */}
+                  <svg className="w-full h-full" viewBox="0 0 400 400">
+                    {prizeTiers.map((tier, index) => {
+                      const totalProbability = prizeTiers.reduce((sum, t) => sum + t.probability, 0);
+                      const startAngle = prizeTiers.slice(0, index).reduce((sum, t) => sum + (t.probability / totalProbability) * 360, 0);
+                      const angle = (tier.probability / totalProbability) * 360;
+                      const endAngle = startAngle + angle;
+                      
+                      // Convert to radians (SVG starts at top, so subtract 90 degrees)
+                      const startRad = (startAngle - 90) * (Math.PI / 180);
+                      const endRad = (endAngle - 90) * (Math.PI / 180);
+                      const centerX = 200;
+                      const centerY = 200;
+                      const radius = 180;
+                      
+                      const x1 = centerX + radius * Math.cos(startRad);
+                      const y1 = centerY + radius * Math.sin(startRad);
+                      const x2 = centerX + radius * Math.cos(endRad);
+                      const y2 = centerY + radius * Math.sin(endRad);
+                      
+                      // Determine color based on tier
+                      const isAvailable = tier.available !== false;
+                      const bgColor = isAvailable 
+                        ? (index % 2 === 0 ? '#ef4444' : '#1f2937')
+                        : (index % 2 === 0 ? '#7f1d1d' : '#111827');
+                      
+                      // Text position (middle of the arc)
+                      const midAngle = (startAngle + endAngle) / 2;
+                      const midRad = (midAngle - 90) * (Math.PI / 180);
+                      const textRadius = radius * 0.65;
+                      const textX = centerX + textRadius * Math.cos(midRad);
+                      const textY = centerY + textRadius * Math.sin(midRad);
+                      
+                      // Format prize text
+                      const prizeText = tier.amount > 0 
+                        ? `${tier.amount.toFixed(0)} USDC`
+                        : 'Nothing';
+                      
+                      // Adjust text rotation to be readable (perpendicular to radius)
+                      const textRotation = midAngle;
+                      
+                      return (
+                        <g key={index}>
+                          <path
+                            d={`M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${angle > 180 ? 1 : 0} 1 ${x2} ${y2} Z`}
+                            fill={bgColor}
+                            stroke="#ffffff30"
+                            strokeWidth="1"
+                          />
+                          {angle > 15 && (
+                            <text
+                              x={textX}
+                              y={textY}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              fill="white"
+                              fontSize={angle > 40 ? "12" : angle > 25 ? "10" : "8"}
+                              fontWeight="bold"
+                              className="select-none"
+                              transform={`rotate(${textRotation}, ${textX}, ${textY})`}
+                            >
+                              {prizeText}
+                            </text>
+                          )}
+                        </g>
+                      );
+                    })}
+                  </svg>
+                  
                   {/* Center circle */}
-                  <div className="absolute inset-8 rounded-full bg-dark border-4 border-white/20 flex items-center justify-center">
+                  <div className="absolute inset-12 rounded-full bg-dark border-4 border-white/20 flex items-center justify-center z-10">
                     {isSpinning ? (
                       <motion.div
                         animate={{ rotate: 360 }}
@@ -365,7 +431,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
                 </motion.div>
                 
                 {/* Pointer */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-20">
                   <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-primary" />
                 </div>
               </div>
