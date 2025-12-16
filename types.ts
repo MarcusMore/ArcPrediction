@@ -56,7 +56,7 @@ export interface Notification {
   read: boolean;
 }
 
-export type ViewState = 'DASHBOARD' | 'PORTFOLIO' | 'ADMIN' | 'BETTING' | 'WHITEPAPER' | 'ACHIEVEMENTS' | 'LEADERBOARD';
+export type ViewState = 'DASHBOARD' | 'PORTFOLIO' | 'ADMIN' | 'BETTING' | 'WHITEPAPER' | 'ACHIEVEMENTS' | 'LEADERBOARD' | 'ROULETTE';
 
 export interface Achievement {
   id: string;

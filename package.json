@@ -20,6 +20,7 @@
     "load-test": "hardhat run scripts/loadTest.ts --network arcTestnet",
     "verify-contract": "hardhat run scripts/verifyContract.ts --network arcTestnet",
     "list-scenarios": "hardhat run scripts/listScenarios.ts --network arcTestnet",
+    "deploy-roulette": "hardhat run scripts/deployRoulette.ts --network arcTestnet",
     "node": "hardhat node",
     "dev": "vite",
     "build": "vite build",

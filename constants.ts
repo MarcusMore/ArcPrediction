@@ -3,6 +3,7 @@ import { Scenario, UserProfile, Notification } from './types';
 
 // Contract address - set after deployment
 export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '';
+export const ROULETTE_CONTRACT_ADDRESS = import.meta.env.VITE_ROULETTE_CONTRACT_ADDRESS || '';
 export const USDC_ADDRESS = '0x3600000000000000000000000000000000000000';
 
 export const MOCK_USER: UserProfile = {

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, PieChart, ShieldCheck, Wallet, Menu, Bell, Search, Filter, LogOut, ArrowRight, Zap, Trophy, Activity, FileText, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, PieChart, ShieldCheck, Wallet, Menu, Bell, Search, Filter, LogOut, ArrowRight, Zap, Trophy, Activity, FileText, BarChart3, Sparkles } from 'lucide-react';
 import { LeaderboardPanel } from './components/Leaderboard/LeaderboardPanel';
 import { AchievementsPanel } from './components/Achievements/AchievementsPanel';
 import { ScenarioCard } from './components/Dashboard/ScenarioCard';
@@ -18,6 +18,7 @@ import { getUSDCBalance, formatUSDC } from './lib/web3';
 import { AdminPanel } from './components/Admin/AdminPanel';
 import { Whitepaper } from './components/Whitepaper/Whitepaper';
 import { Footer } from './components/Footer/Footer';
+import { RoulettePanel } from './components/Roulette/RoulettePanel';
 
 // Simple mock for User Bets
 const INITIAL_BETS: UserBet[] = [
@@ -867,17 +868,28 @@ const App: React.FC = () => {
 
             {/* Sidebar / Navigation (Desktop) */}
             <nav className="fixed left-0 top-0 h-full w-20 hidden lg:flex flex-col items-center py-8 border-r border-white/5 bg-black/20 backdrop-blur-md z-40">
-                <div className="mb-12">
-                    <div className="w-10 h-10 bg-gradient-to-tr from-primary to-secondary rounded-lg flex items-center justify-center font-display font-bold text-xl cursor-pointer" onClick={() => setView('DASHBOARD')}>A</div>
+                <div className="mb-12 relative group">
+                    <div 
+                        className="w-10 h-10 bg-gradient-to-tr from-primary to-secondary rounded-lg flex items-center justify-center font-display font-bold text-xl cursor-pointer hover:scale-110 transition-transform" 
+                        onClick={() => setView('DASHBOARD')}
+                        aria-label="Home"
+                    >
+                        A
+                    </div>
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/90 backdrop-blur-sm text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 border border-white/10 shadow-lg">
+                        Home
+                        <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[6px] border-r-black/90"></div>
+                    </div>
                 </div>
                 
                 <div className="flex flex-col gap-8 w-full items-center">
-                    <NavIcon icon={<LayoutDashboard />} active={view === 'DASHBOARD'} onClick={() => setView('DASHBOARD')} />
-                    <NavIcon icon={<PieChart />} active={view === 'PORTFOLIO'} onClick={() => setView('PORTFOLIO')} />
-                    <NavIcon icon={<Trophy />} active={view === 'ACHIEVEMENTS'} onClick={() => setView('ACHIEVEMENTS')} />
-                    <NavIcon icon={<BarChart3 />} active={view === 'LEADERBOARD'} onClick={() => setView('LEADERBOARD')} />
-                    <NavIcon icon={<ShieldCheck />} active={view === 'ADMIN'} onClick={() => setView('ADMIN')} />
-                    <NavIcon icon={<FileText />} active={view === 'WHITEPAPER'} onClick={() => setView('WHITEPAPER')} />
+                    <NavIcon icon={<LayoutDashboard />} active={view === 'DASHBOARD'} onClick={() => setView('DASHBOARD')} tooltip="Dashboard" />
+                    <NavIcon icon={<PieChart />} active={view === 'PORTFOLIO'} onClick={() => setView('PORTFOLIO')} tooltip="Portfolio" />
+                    <NavIcon icon={<Sparkles />} active={view === 'ROULETTE'} onClick={() => setView('ROULETTE')} tooltip="Roulette" />
+                    <NavIcon icon={<Trophy />} active={view === 'ACHIEVEMENTS'} onClick={() => setView('ACHIEVEMENTS')} tooltip="Achievements" />
+                    <NavIcon icon={<BarChart3 />} active={view === 'LEADERBOARD'} onClick={() => setView('LEADERBOARD')} tooltip="Leaderboard" />
+                    <NavIcon icon={<ShieldCheck />} active={view === 'ADMIN'} onClick={() => setView('ADMIN')} tooltip="Admin" />
+                    <NavIcon icon={<FileText />} active={view === 'WHITEPAPER'} onClick={() => setView('WHITEPAPER')} tooltip="Whitepaper" />
                 </div>
 
                 <div className="mt-auto">
@@ -887,12 +899,13 @@ const App: React.FC = () => {
 
             {/* Mobile Bottom Nav */}
             <nav className="fixed bottom-0 left-0 w-full h-16 lg:hidden bg-black/80 backdrop-blur-xl border-t border-white/10 z-40 flex justify-around items-center px-4">
-                 <NavIcon icon={<LayoutDashboard />} active={view === 'DASHBOARD'} onClick={() => setView('DASHBOARD')} mobile />
-                 <NavIcon icon={<PieChart />} active={view === 'PORTFOLIO'} onClick={() => setView('PORTFOLIO')} mobile />
-                 <NavIcon icon={<Trophy />} active={view === 'ACHIEVEMENTS'} onClick={() => setView('ACHIEVEMENTS')} mobile />
-                 <NavIcon icon={<BarChart3 />} active={view === 'LEADERBOARD'} onClick={() => setView('LEADERBOARD')} mobile />
-                 <NavIcon icon={<ShieldCheck />} active={view === 'ADMIN'} onClick={() => setView('ADMIN')} mobile />
-                 <NavIcon icon={<FileText />} active={view === 'WHITEPAPER'} onClick={() => setView('WHITEPAPER')} mobile />
+                 <NavIcon icon={<LayoutDashboard />} active={view === 'DASHBOARD'} onClick={() => setView('DASHBOARD')} mobile tooltip="Dashboard" />
+                 <NavIcon icon={<PieChart />} active={view === 'PORTFOLIO'} onClick={() => setView('PORTFOLIO')} mobile tooltip="Portfolio" />
+                 <NavIcon icon={<Sparkles />} active={view === 'ROULETTE'} onClick={() => setView('ROULETTE')} mobile tooltip="Roulette" />
+                 <NavIcon icon={<Trophy />} active={view === 'ACHIEVEMENTS'} onClick={() => setView('ACHIEVEMENTS')} mobile tooltip="Achievements" />
+                 <NavIcon icon={<BarChart3 />} active={view === 'LEADERBOARD'} onClick={() => setView('LEADERBOARD')} mobile tooltip="Leaderboard" />
+                 <NavIcon icon={<ShieldCheck />} active={view === 'ADMIN'} onClick={() => setView('ADMIN')} mobile tooltip="Admin" />
+                 <NavIcon icon={<FileText />} active={view === 'WHITEPAPER'} onClick={() => setView('WHITEPAPER')} mobile tooltip="Whitepaper" />
             </nav>
 
             {/* Main Content Area */}
@@ -1208,6 +1221,13 @@ const App: React.FC = () => {
                         />
                     )}
                     
+                    {view === 'ROULETTE' && (
+                        <RoulettePanel 
+                            walletAddress={walletAddress}
+                            isAdmin={isAdmin}
+                        />
+                    )}
+                    
                     {view === 'ADMIN' && (
                         <>
                             {isCheckingAdmin ? (
@@ -1264,22 +1284,46 @@ const App: React.FC = () => {
   );
 };
 
-const NavIcon = ({ icon, active, onClick, mobile }: { icon: React.ReactNode, active: boolean, onClick: () => void, mobile?: boolean }) => (
-    <button 
-        onClick={onClick}
-        className={`
-            relative p-3 rounded-xl transition-all duration-300 group
-            ${active ? 'text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
-        `}
-    >
-        {active && (
-            <motion.div 
-                layoutId={mobile ? "navIndicatorMobile" : "navIndicator"}
-                className={`absolute inset-0 bg-primary/20 rounded-xl border border-primary/50 shadow-[0_0_15px_rgba(67,97,238,0.3)]`} 
-            />
+const NavIcon = ({ icon, active, onClick, mobile, tooltip }: { icon: React.ReactNode, active: boolean, onClick: () => void, mobile?: boolean, tooltip?: string }) => (
+    <div className="relative group">
+        <button 
+            onClick={onClick}
+            className={`
+                relative p-3 rounded-xl transition-all duration-300
+                ${active ? 'text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
+            `}
+            aria-label={tooltip}
+        >
+            {active && (
+                <motion.div 
+                    layoutId={mobile ? "navIndicatorMobile" : "navIndicator"}
+                    className={`absolute inset-0 bg-primary/20 rounded-xl border border-primary/50 shadow-[0_0_15px_rgba(67,97,238,0.3)]`} 
+                />
+            )}
+            <div className="relative z-10">{icon}</div>
+        </button>
+        
+        {/* Tooltip */}
+        {tooltip && (
+            <>
+                {/* Desktop tooltip (left side) */}
+                {!mobile && (
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/90 backdrop-blur-sm text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 border border-white/10 shadow-lg">
+                        {tooltip}
+                        <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[6px] border-r-black/90"></div>
+                    </div>
+                )}
+                
+                {/* Mobile tooltip (above) */}
+                {mobile && (
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 backdrop-blur-sm text-white text-xs font-medium rounded whitespace-nowrap opacity-0 group-active:opacity-100 transition-opacity duration-200 pointer-events-none z-50 border border-white/10 shadow-lg">
+                        {tooltip}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-black/90"></div>
+                    </div>
+                )}
+            </>
         )}
-        <div className="relative z-10">{icon}</div>
-    </button>
+    </div>
 );
 
 export default App;
