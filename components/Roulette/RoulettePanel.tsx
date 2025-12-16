@@ -129,7 +129,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
 
   const handleSpin = async () => {
     if (!walletAddress) {
-      alert('Please connect your wallet');
+      alert('🔗 Please connect your wallet to play the roulette.');
       return;
     }
 
@@ -140,8 +140,8 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
     
     if (balance < totalCost) {
       const costMessage = canSpin.canSpin 
-        ? `Insufficient balance. You need ${spinCost.toFixed(2)} USDC to spin.`
-        : `Insufficient balance. You need ${extraSpinCost.toFixed(2)} USDC to spin again.`;
+        ? `💰 Insufficient balance. You need ${spinCost.toFixed(2)} USDC to spin.`
+        : `💰 Insufficient balance. You need ${extraSpinCost.toFixed(2)} USDC to spin again.`;
       alert(costMessage);
       return;
     }
@@ -179,10 +179,52 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
       }
     } catch (error: any) {
       console.error('Error spinning:', error);
-      let errorMessage = 'Failed to spin roulette';
+      let errorMessage = 'Oops! Something went wrong while spinning the roulette.';
       
       if (error.message) {
-        errorMessage = error.message;
+        const msg = error.message.toLowerCase();
+        
+        // User-friendly error messages
+        if (msg.includes('cancelled') || msg.includes('user denied') || msg.includes('user rejected')) {
+          // Don't show alert for user cancellation
+          setIsSpinning(false);
+          return;
+        } else if (msg.includes('rate limit') || msg.includes('rate limited')) {
+          errorMessage = '⏳ The network is busy right now. Please wait a few seconds and try again.';
+        } else if (msg.includes('insufficient balance') || msg.includes('insufficient funds')) {
+          errorMessage = `💰 Insufficient balance. You need ${totalCost.toFixed(2)} USDC to spin.`;
+        } else if (msg.includes('prize pool is empty')) {
+          errorMessage = '🎁 The prize pool is empty. Please wait for the admin to add funds.';
+        } else if (msg.includes('spin cost not set')) {
+          errorMessage = '⚙️ The roulette is not configured yet. Please contact support.';
+        } else if (msg.includes('paused') || msg.includes('contract is paused')) {
+          errorMessage = '⏸️ The roulette is temporarily paused. Please check back later.';
+        } else if (msg.includes('wait 24 hours') || msg.includes('can only spin once per day')) {
+          errorMessage = '⏰ You can spin again in 24 hours, or pay 5 USDC for an extra spin now.';
+        } else if (msg.includes('transfer failed') || msg.includes('approval')) {
+          errorMessage = '💳 Payment failed. Please check your USDC balance and try approving the transaction again.';
+        } else if (msg.includes('network') || msg.includes('connection')) {
+          errorMessage = '🌐 Network connection issue. Please check your internet connection and try again.';
+        } else if (msg.includes('revert') || msg.includes('execution reverted')) {
+          // Try to extract a more friendly message from revert reason
+          const revertMatch = error.message.match(/revert(ed)?\s+"?([^"]+)"?/i) || 
+                             error.message.match(/reason:\s*"?([^"]+)"?/i);
+          if (revertMatch && (revertMatch[2] || revertMatch[1])) {
+            const revertReason = (revertMatch[2] || revertMatch[1]).toLowerCase();
+            if (revertReason.includes('prize pool')) {
+              errorMessage = '🎁 The prize pool needs more funds. Please wait for the admin to add funds.';
+            } else if (revertReason.includes('paused')) {
+              errorMessage = '⏸️ The roulette is temporarily paused. Please check back later.';
+            } else {
+              errorMessage = `❌ Transaction failed: ${revertMatch[2] || revertMatch[1]}`;
+            }
+          } else {
+            errorMessage = '❌ Transaction failed. Please try again or contact support if the problem persists.';
+          }
+        } else {
+          // Use the original message but make it more friendly
+          errorMessage = error.message;
+        }
       } else if (error.reason) {
         errorMessage = error.reason;
       }
@@ -190,27 +232,24 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
       // Make sure to reset spinning state if error occurs
       setIsSpinning(false);
       
-      // Don't show alert for user cancellation
-      if (!errorMessage.includes('cancelled') && !errorMessage.includes('Transaction was cancelled')) {
-        alert(errorMessage);
-      }
+      alert(errorMessage);
     }
   };
 
   const handleFund = async () => {
     if (!walletAddress || !isAdmin) {
-      alert('Only admins can fund the prize pool');
+      alert('🔒 Only admins can fund the prize pool.');
       return;
     }
 
     const amount = parseFloat(fundAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount');
+      alert('❌ Please enter a valid amount (greater than 0).');
       return;
     }
 
     if (balance < amount) {
-      alert(`Insufficient balance. You need ${amount} USDC.`);
+      alert(`💰 Insufficient balance. You need ${amount.toFixed(2)} USDC to fund the prize pool.`);
       return;
     }
 
@@ -218,7 +257,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
     try {
       const tx = await fundPrizePool(amount);
       await tx.wait();
-      alert(`Successfully funded ${amount} USDC to prize pool!`);
+      alert(`✅ Successfully funded ${amount.toFixed(2)} USDC to the prize pool!`);
       setFundAmount('100');
       
       // Refresh data
@@ -231,10 +270,28 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
       }
     } catch (error: any) {
       console.error('Error funding prize pool:', error);
-      let errorMessage = 'Failed to fund prize pool';
+      let errorMessage = '❌ Failed to fund the prize pool.';
+      
       if (error.message) {
-        errorMessage = error.message;
+        const msg = error.message.toLowerCase();
+        
+        if (msg.includes('cancelled') || msg.includes('user denied') || msg.includes('user rejected')) {
+          // Don't show alert for user cancellation
+          setIsFunding(false);
+          return;
+        } else if (msg.includes('rate limit') || msg.includes('rate limited')) {
+          errorMessage = '⏳ The network is busy right now. Please wait a few seconds and try again.';
+        } else if (msg.includes('insufficient balance') || msg.includes('insufficient funds')) {
+          errorMessage = `💰 Insufficient balance. You need ${amount.toFixed(2)} USDC to fund the prize pool.`;
+        } else if (msg.includes('approval') || msg.includes('transfer failed')) {
+          errorMessage = '💳 Payment failed. Please check your USDC balance and try approving the transaction again.';
+        } else if (msg.includes('network') || msg.includes('connection')) {
+          errorMessage = '🌐 Network connection issue. Please check your internet connection and try again.';
+        } else {
+          errorMessage = `❌ ${error.message}`;
+        }
       }
+      
       alert(errorMessage);
     } finally {
       setIsFunding(false);

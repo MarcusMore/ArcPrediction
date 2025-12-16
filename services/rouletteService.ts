@@ -284,7 +284,14 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
   if (allowance < totalCostWei) {
     console.log('✅ Approving', formatUSDC(totalCostWei), 'USDC');
     const approveTx = await approveUSDC(rouletteContractAddress, totalCostWei);
-    await approveTx.wait();
+    // Wait for approval with retry logic for rate limiting
+    await retryWithBackoff(
+      async () => {
+        await approveTx.wait();
+      },
+      3,
+      2000
+    );
     console.log('✅ Approval confirmed');
   }
   
@@ -302,8 +309,10 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
         return await fn();
       } catch (error: any) {
         const isRateLimit = error.code === -32005 || 
+                           error.code === -32603 ||
                            error.message?.includes('rate limited') || 
                            error.message?.includes('rate limit') ||
+                           error.message?.includes('Request is being rate limited') ||
                            error.data?.httpStatus === 429;
         
         if (isRateLimit && i < maxRetries - 1) {
@@ -409,8 +418,8 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
     let errorMessage = 'Failed to spin roulette';
     
     // Check for rate limiting first
-    if (error.code === -32005 || error.message?.includes('rate limited') || error.message?.includes('rate limit')) {
-      errorMessage = 'RPC rate limit exceeded. Please wait a few seconds and try again.';
+    if (error.code === -32005 || error.code === -32603 || error.message?.includes('rate limited') || error.message?.includes('rate limit')) {
+      errorMessage = '⏳ The network is busy right now. Please wait a few seconds and try again.';
       console.error('⚠️ Rate limit error:', error);
       throw new Error(errorMessage);
     }
@@ -422,29 +431,27 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
     } else if (error.message) {
       const msg = error.message;
       
-      // Check for specific error patterns
+      // Check for specific error patterns with friendly messages
       if (msg.includes('Prize pool is empty') || msg.includes('prize pool is empty')) {
-        errorMessage = 'Prize pool is empty. Please wait for the admin to fund it.';
+        errorMessage = '🎁 The prize pool is empty. Please wait for the admin to add funds.';
       } else if (msg.includes('Extra spin cost transfer failed') || msg.includes('extra spin cost transfer failed')) {
-        errorMessage = 'Extra spin payment failed. Please check your balance and approval (need 5 USDC).';
-      } else if (msg.includes('Extra spin cost transfer failed') || msg.includes('extra spin cost transfer failed')) {
-        errorMessage = 'Extra spin payment failed. Please check your balance and approval (need 5 USDC).';
+        errorMessage = '💳 Extra spin payment failed. Please check your balance and approval (you need 5 USDC).';
       } else if (msg.includes('Spin cost transfer failed') || msg.includes('transfer failed')) {
-        errorMessage = 'Token transfer failed. Please check your balance and approval.';
+        errorMessage = '💳 Payment failed. Please check your USDC balance and try approving the transaction again.';
       } else if (msg.includes('Spin cost not set')) {
-        errorMessage = 'Spin cost is not configured. Please contact admin.';
+        errorMessage = '⚙️ The roulette is not configured yet. Please contact support.';
       } else if (msg.includes('Insufficient prize pool')) {
-        errorMessage = 'Insufficient prize pool. Please wait for the admin to add more funds.';
+        errorMessage = '🎁 The prize pool needs more funds. Please wait for the admin to add funds.';
       } else if (msg.includes('You can only spin once per day') || msg.includes('wait 24 hours')) {
         // This error should not happen when paying extra spin cost
         // It means the contract doesn't support extra spin (old version)
         // Or the contract logic is blocking the spin
-        errorMessage = 'The contract may not support extra spins. Please wait 24 hours or contact support.';
+        errorMessage = '⏰ You can spin again in 24 hours, or pay 5 USDC for an extra spin now.';
       } else if (msg.includes('user rejected') || msg.includes('User denied')) {
         errorMessage = 'Transaction was cancelled.';
         throw new Error(errorMessage);
-      } else if (msg.includes('rate limited') || msg.includes('rate limit') || error.code === -32005) {
-        errorMessage = 'RPC rate limit exceeded. Please wait a few seconds and try again.';
+      } else if (msg.includes('rate limited') || msg.includes('rate limit') || error.code === -32005 || error.code === -32603) {
+        errorMessage = '⏳ The network is busy right now. Please wait a few seconds and try again.';
       } else {
         // Try to extract revert reason from error message
         const revertMatch = msg.match(/revert(ed)?\s+"?([^"]+)"?/i) || 
@@ -453,8 +460,8 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
         if (revertMatch && (revertMatch[2] || revertMatch[1])) {
           errorMessage = revertMatch[2] || revertMatch[1];
         } else {
-          // If we can't extract, provide more context
-          errorMessage = `Transaction reverted. Check console for details. Original error: ${msg.substring(0, 200)}`;
+          // If we can't extract, provide friendly message
+          errorMessage = '❌ Transaction failed. Please try again or contact support if the problem persists.';
         }
       }
     }
@@ -472,8 +479,14 @@ export async function spin(): Promise<{ prizeWon: number; prizeName: string }> {
     throw new Error(errorMessage);
   }
   
-  // Wait for transaction and get receipt
-  const receipt = await tx.wait();
+  // Wait for transaction and get receipt with retry logic for rate limiting
+  const receipt = await retryWithBackoff(
+    async () => {
+      return await tx.wait();
+    },
+    3,
+    2000
+  );
   
   // Parse event to get prize
   let prizeWon = 0;
@@ -516,7 +529,14 @@ export async function fundPrizePool(amount: number): Promise<ethers.ContractTran
   if (allowance < amountWei) {
     // Approve a larger amount
     const approveTx = await approveUSDC(rouletteContractAddress, amountWei * 2n);
-    await approveTx.wait();
+    // Wait for approval with retry logic for rate limiting
+    await retryWithBackoff(
+      async () => {
+        await approveTx.wait();
+      },
+      3,
+      2000
+    );
   }
 
   const contract = await getRouletteContractWithSigner();
