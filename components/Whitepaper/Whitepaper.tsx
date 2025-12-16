@@ -56,6 +56,92 @@ export const Whitepaper: React.FC = () => {
           </div>
         </GlassCard>
 
+        {/* Technical Architecture */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4">2. Technical Architecture</h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">2.1 Blockchain Network</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Network:</strong> Arc Testnet</li>
+                <li><strong>Chain ID:</strong> 5042002 (0x4cef52)</li>
+                <li><strong>Native Token:</strong> USDC (for gas fees)</li>
+                <li><strong>Token Standard:</strong> ERC-20 (6 decimals for USDC interface)</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">2.2 Smart Contracts</h3>
+              <p className="text-white/80 mb-3">The platform is powered by two main smart contracts:</p>
+              <div className="space-y-3">
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">BettingPlatform.sol</h4>
+                  <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
+                    <li>Scenario management with custom deadlines</li>
+                    <li>Bet placement and tracking</li>
+                    <li>Outcome resolution (normal and emergency)</li>
+                    <li>Fee calculation and distribution</li>
+                    <li>Multi-admin role management</li>
+                  </ul>
+                </div>
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Roulette.sol</h4>
+                  <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
+                    <li>Prize pool management</li>
+                    <li>Weighted probability system</li>
+                    <li>Daily spin cooldown enforcement</li>
+                    <li>Extra spin payment system with admin fee</li>
+                    <li>Automatic prize tier deactivation</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Betting Mechanics */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
+            <Clock className="text-primary" size={24} />
+            3. Betting Mechanics
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">3.1 Scenario Lifecycle</h3>
+              <div className="space-y-3">
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Creation</h4>
+                  <p className="text-white/80 text-sm">Admin creates scenario with description, betting deadline, and resolution deadline</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Betting Period</h4>
+                  <p className="text-white/80 text-sm">Users place bets. Real-time odds update based on pool distribution</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Closure</h4>
+                  <p className="text-white/80 text-sm">Betting closes automatically at deadline or manually by admin</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Resolution</h4>
+                  <p className="text-white/80 text-sm">Admin declares outcome. Winnings calculated automatically</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Distribution</h4>
+                  <p className="text-white/80 text-sm">Winners claim winnings. Admin claims fee</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">3.2 Betting Limits</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Minimum Bet:</strong> 1 USDC</li>
+                <li><strong>Maximum Bet:</strong> 200 USDC</li>
+                <li><strong>Per Scenario:</strong> One bet per user per scenario</li>
+                <li><strong>Concurrent Scenarios:</strong> Unlimited participation</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
         {/* Financial Calculations */}
         <GlassCard className="p-6">
           <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
@@ -165,88 +251,28 @@ export const Whitepaper: React.FC = () => {
           </div>
         </GlassCard>
 
-        {/* Fee Structure */}
+        {/* User Experience Flow */}
         <GlassCard className="p-6">
-          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
-            <DollarSign className="text-accent" size={24} />
-            8. Fee Structure
-          </h2>
+          <h2 className="text-2xl font-display font-bold mb-4">5. User Experience Flow</h2>
           <div className="space-y-4">
             <div>
-              <h3 className="text-xl font-bold mb-2">8.1 User Fees</h3>
-              <ul className="list-disc list-inside space-y-2 text-white/80">
-                <li><strong>Betting Fee:</strong> None (0%)</li>
-                <li><strong>Claiming Fee:</strong> None (0%)</li>
-                <li><strong>Gas Fees:</strong> Paid in USDC (Arc Testnet native)</li>
-              </ul>
+              <h3 className="text-xl font-bold mb-2">5.1 Getting Started</h3>
+              <ol className="list-decimal list-inside space-y-2 text-white/80">
+                <li><strong>Connect Wallet:</strong> User connects MetaMask or compatible Web3 wallet</li>
+                <li><strong>Approve USDC:</strong> User approves USDC spending for the contract</li>
+                <li><strong>View Scenarios:</strong> Browse available betting scenarios</li>
+                <li><strong>Select Scenario:</strong> Choose a scenario to bet on</li>
+              </ol>
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">8.2 Platform Fees</h3>
-              <ul className="list-disc list-inside space-y-2 text-white/80">
-                <li><strong>Admin Fee:</strong> 1% of total pool per scenario</li>
-                <li><strong>Fee Collection:</strong> After scenario resolution</li>
-                <li><strong>Fee Distribution:</strong> Claimed by contract owner</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-2">8.3 Fee Calculation Example</h3>
-              <div className="bg-white/5 p-4 rounded-lg space-y-2 text-white/80">
-                <div><strong>Scenario:</strong></div>
-                <ul className="list-disc list-inside ml-4 text-sm">
-                  <li>Total bets: 10,000 USDC</li>
-                  <li>Admin fee: 100 USDC (1%)</li>
-                  <li>Adjusted pool: 9,900 USDC</li>
-                </ul>
-                <div className="mt-3"><strong>Distribution:</strong></div>
-                <ul className="list-disc list-inside ml-4 text-sm">
-                  <li>Winners share: 9,900 USDC</li>
-                  <li>Admin receives: 100 USDC</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </GlassCard>
-
-        {/* Betting Mechanics */}
-        <GlassCard className="p-6">
-          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
-            <Clock className="text-primary" size={24} />
-            3. Betting Mechanics
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-xl font-bold mb-2">3.1 Scenario Lifecycle</h3>
-              <div className="space-y-3">
-                <div className="bg-white/5 p-4 rounded-lg">
-                  <h4 className="font-bold mb-2 text-white/90">Creation</h4>
-                  <p className="text-white/80 text-sm">Admin creates scenario with description, betting deadline, and resolution deadline</p>
-                </div>
-                <div className="bg-white/5 p-4 rounded-lg">
-                  <h4 className="font-bold mb-2 text-white/90">Betting Period</h4>
-                  <p className="text-white/80 text-sm">Users place bets. Real-time odds update based on pool distribution</p>
-                </div>
-                <div className="bg-white/5 p-4 rounded-lg">
-                  <h4 className="font-bold mb-2 text-white/90">Closure</h4>
-                  <p className="text-white/80 text-sm">Betting closes automatically at deadline or manually by admin</p>
-                </div>
-                <div className="bg-white/5 p-4 rounded-lg">
-                  <h4 className="font-bold mb-2 text-white/90">Resolution</h4>
-                  <p className="text-white/80 text-sm">Admin declares outcome. Winnings calculated automatically</p>
-                </div>
-                <div className="bg-white/5 p-4 rounded-lg">
-                  <h4 className="font-bold mb-2 text-white/90">Distribution</h4>
-                  <p className="text-white/80 text-sm">Winners claim winnings. Admin claims fee</p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-2">3.2 Betting Limits</h3>
-              <ul className="list-disc list-inside space-y-2 text-white/80">
-                <li><strong>Minimum Bet:</strong> 1 USDC</li>
-                <li><strong>Maximum Bet:</strong> 200 USDC</li>
-                <li><strong>Per Scenario:</strong> One bet per user per scenario</li>
-                <li><strong>Concurrent Scenarios:</strong> Unlimited participation</li>
-              </ul>
+              <h3 className="text-xl font-bold mb-2">5.2 Placing a Bet</h3>
+              <ol className="list-decimal list-inside space-y-2 text-white/80">
+                <li><strong>Choose Position:</strong> Select Yes or No</li>
+                <li><strong>Set Amount:</strong> Use slider to set bet amount (1-200 USDC)</li>
+                <li><strong>Review:</strong> Check potential return and fees</li>
+                <li><strong>Confirm:</strong> Sign transaction to place bet</li>
+                <li><strong>Track:</strong> Monitor bet in portfolio</li>
+              </ol>
             </div>
           </div>
         </GlassCard>
@@ -279,15 +305,109 @@ export const Whitepaper: React.FC = () => {
           </div>
         </GlassCard>
 
+        {/* Admin Functions */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4">7. Admin Functions</h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">7.1 Scenario Management</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Create Scenario:</strong> Post new betting scenarios with custom deadlines</li>
+                <li><strong>Close Betting:</strong> Manually close betting before deadline</li>
+                <li><strong>Resolve Scenario:</strong> Declare outcome (Yes/No) by resolution deadline</li>
+                <li><strong>Emergency Resolve:</strong> Resolve after deadline has passed</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">7.2 Fee Management</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Claim Admin Fee:</strong> Collect 1% fee from resolved scenarios</li>
+                <li><strong>Fee Tracking:</strong> Fee status tracked per scenario</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Fee Structure */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
+            <DollarSign className="text-accent" size={24} />
+            8. Fee Structure
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">8.1 User Fees</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Betting Fee:</strong> None (0%)</li>
+                <li><strong>Claiming Fee:</strong> None (0%)</li>
+                <li><strong>Gas Fees:</strong> Paid in USDC (Arc Testnet native)</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">8.2 Platform Fees</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Admin Fee:</strong> 1% of total pool per scenario</li>
+                <li><strong>Fee Collection:</strong> After scenario resolution</li>
+                <li><strong>Fee Distribution:</strong> Claimed by contract owner</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Risk Considerations */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4">9. Risk Considerations</h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">9.1 User Risks</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Loss of Bet:</strong> Users lose their bet if they choose the wrong outcome</li>
+                <li><strong>Smart Contract Risk:</strong> Platform uses audited OpenZeppelin contracts</li>
+                <li><strong>Network Risk:</strong> Arc Testnet is a test network</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">9.2 Platform Risks</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Admin Centralization:</strong> Admin controls scenario creation and resolution</li>
+                <li><strong>Resolution Delay:</strong> Admin must resolve by deadline</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Roulette Game */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4">10. Roulette Game</h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">10.1 Overview</h3>
+              <p className="text-white/80">Premium game where users can spin a wheel to win prizes from a funded prize pool. The system uses weighted probabilities where higher prizes have lower chances of winning.</p>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">10.2 Prize Tiers</h3>
+              <p className="text-white/80 mb-3">9 prize tiers with weighted probabilities, ranging from "Nothing" (0 USDC) to "Legendary Prize" (100 USDC).</p>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">10.3 Spin Mechanics</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>Daily Spin Limit:</strong> One free spin per day (24-hour cooldown)</li>
+                <li><strong>Extra Spin:</strong> Pay 5 USDC to spin again before cooldown expires</li>
+                <li><strong>Admin Fee:</strong> 10% of extra spin cost goes to admin, 90% to prize pool</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
         {/* Gamification & Social */}
         <GlassCard className="p-6">
           <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
             <Users className="text-primary" size={24} />
-            10. Gamification & Social Features
+            11. Gamification & Social Features
           </h2>
           <div className="space-y-4">
             <div>
-              <h3 className="text-xl font-bold mb-2">10.1 Achievement System</h3>
+              <h3 className="text-xl font-bold mb-2">11.1 Achievement System</h3>
               <p className="text-white/80 mb-3">30+ achievements across multiple categories:</p>
               <ul className="list-disc list-inside space-y-2 text-white/80 text-sm">
                 <li><strong>Betting:</strong> First bet, 10/50/100/500 bets milestones</li>
@@ -296,17 +416,82 @@ export const Whitepaper: React.FC = () => {
                 <li><strong>Volume:</strong> 1K/10K/100K USDC total betting volume</li>
                 <li><strong>Profit:</strong> 100/1K/10K USDC profit milestones</li>
                 <li><strong>Streaks:</strong> 3/5/10 consecutive wins</li>
-                <li><strong>Special:</strong> All categories, perfect week</li>
               </ul>
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">10.2 Leaderboard</h3>
+              <h3 className="text-xl font-bold mb-2">11.2 Leaderboard</h3>
               <ul className="list-disc list-inside space-y-2 text-white/80 text-sm">
                 <li><strong>Privacy-Protected:</strong> Other users' addresses partially hidden</li>
-                <li><strong>User Status Card:</strong> Prominent display of user's position</li>
                 <li><strong>Multiple Sort Options:</strong> By profit, win rate, volume, wins, streak</li>
                 <li><strong>Top 3 Podium:</strong> Special display for top performers</li>
-                <li><strong>Real-time Updates:</strong> Rankings update as scenarios resolve</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* User Interface Features */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4">12. User Interface Features</h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">12.1 Dashboard</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80 text-sm">
+                <li>Scenario cards with real-time odds</li>
+                <li>Category filtering and search functionality</li>
+                <li>Closed bets filter (toggle to show/hide)</li>
+                <li>Real-time countdown timers</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">12.2 Portfolio</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80 text-sm">
+                <li>Performance metrics (profit, win rate, active capital)</li>
+                <li>Claimable bets section</li>
+                <li>Detailed bet history table</li>
+                <li>Closed bets filter</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">12.3 Roulette Panel</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80 text-sm">
+                <li>Interactive prize wheel animation with prize labels</li>
+                <li>Prize pool display and available prize tiers</li>
+                <li>Spin button with cooldown status</li>
+                <li>Extra spin option (5 USDC)</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Roadmap */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4">13. Roadmap</h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">13.1 Current Features (v1.2)</h3>
+              <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
+                <li>✅ Basic betting functionality</li>
+                <li>✅ Scenario management</li>
+                <li>✅ Admin panel with multi-admin support</li>
+                <li>✅ Portfolio tracking</li>
+                <li>✅ Achievement system (30+ achievements)</li>
+                <li>✅ Leaderboard with privacy protection</li>
+                <li>✅ Roulette game with prize tiers</li>
+                <li>✅ Daily spin limit with extra spin option</li>
+                <li>✅ Closed bets filter</li>
+                <li>✅ Smart prize tier deactivation</li>
+                <li>✅ Improved error handling and retry logic</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">13.2 Future Enhancements</h3>
+              <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
+                <li>🔄 Oracle integration for automatic resolution</li>
+                <li>🔄 Multi-signature admin controls</li>
+                <li>🔄 Advanced analytics and charts</li>
+                <li>🔄 Mobile app support</li>
+                <li>🔄 Social features (following, sharing)</li>
+                <li>🔄 NFT rewards for achievements</li>
               </ul>
             </div>
           </div>
@@ -314,7 +499,7 @@ export const Whitepaper: React.FC = () => {
 
         {/* Technical Specs */}
         <GlassCard className="p-6">
-          <h2 className="text-2xl font-display font-bold mb-4">12. Technical Specifications</h2>
+          <h2 className="text-2xl font-display font-bold mb-4">14. Technical Specifications</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h3 className="font-bold mb-2 text-white/90">Smart Contract</h3>
@@ -346,8 +531,51 @@ export const Whitepaper: React.FC = () => {
             <div>
               <h3 className="font-bold mb-2 text-white/90">Contract</h3>
               <ul className="text-sm text-white/80 space-y-1">
-                <li>Address: 0xDE4544a8bB8e764A66E5659dcbb5b1f60327b13f</li>
+                <li>Address: Check .env file</li>
                 <li>USDC: 0x3600...0000</li>
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Security & Access Control */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
+            <Shield className="text-secondary" size={24} />
+            15. Security & Access Control
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">15.1 Access Control System</h3>
+              <div className="space-y-3">
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Owner</h4>
+                  <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
+                    <li>Permanent owner address (cannot be changed)</li>
+                    <li>Full control over contract</li>
+                    <li>Can pause/unpause</li>
+                    <li>Can add/remove admins</li>
+                  </ul>
+                </div>
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2 text-white/90">Admins</h4>
+                  <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
+                    <li>Can create scenarios</li>
+                    <li>Can close betting</li>
+                    <li>Can resolve scenarios</li>
+                    <li>Can claim admin fees</li>
+                    <li>Cannot pause/unpause</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">15.2 Security Features</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80">
+                <li><strong>ReentrancyGuard:</strong> On all fund transfers</li>
+                <li><strong>Input Validation:</strong> All inputs validated before execution</li>
+                <li><strong>Deadline Enforcement:</strong> Timestamps validated on-chain</li>
+                <li><strong>Amount Limits:</strong> Min/max bet enforced by contract</li>
               </ul>
             </div>
           </div>
@@ -358,7 +586,7 @@ export const Whitepaper: React.FC = () => {
           <div className="flex items-start gap-3">
             <AlertCircle className="text-yellow-500 flex-shrink-0 mt-1" size={24} />
             <div>
-              <h3 className="text-xl font-bold mb-2 text-yellow-500">12. Legal and Compliance</h3>
+              <h3 className="text-xl font-bold mb-2 text-yellow-500">16. Legal and Compliance</h3>
               <div className="space-y-3 text-white/80">
                 <div>
                   <strong className="text-white/90">Testnet Disclaimer:</strong>
@@ -377,10 +605,43 @@ export const Whitepaper: React.FC = () => {
           </div>
         </GlassCard>
 
+        {/* Contact and Resources */}
+        <GlassCard className="p-6">
+          <h2 className="text-2xl font-display font-bold mb-4">17. Contact and Resources</h2>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-2">17.1 Documentation</h3>
+              <ul className="list-disc list-inside space-y-2 text-white/80 text-sm">
+                <li><strong>GitHub:</strong> Repository available for review</li>
+                <li><strong>Explorer:</strong> https://testnet.arcscan.app</li>
+                <li><strong>Arc Network Docs:</strong> https://docs.arc.network</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">17.2 Support</h3>
+              <p className="text-white/80">For issues, questions, or feedback, please contact the development team.</p>
+            </div>
+          </div>
+        </GlassCard>
+
         {/* Changelog */}
         <GlassCard className="p-6">
           <h2 className="text-2xl font-display font-bold mb-4">Changelog</h2>
           <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-bold mb-2 text-white/90">Version 1.2 (December 2025)</h3>
+              <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
+                <li>✅ Added Roulette Game with prize tiers (1-100 USDC)</li>
+                <li>✅ Added Daily Spin Limit (24-hour cooldown)</li>
+                <li>✅ Added Extra Spin feature (5 USDC, 10% admin fee)</li>
+                <li>✅ Added Smart Prize Tier Deactivation</li>
+                <li>✅ Added Closed Bets Filter (Dashboard & Portfolio)</li>
+                <li>✅ Added Automatic Retry for RPC Rate Limiting</li>
+                <li>✅ Added Prize Labels on Roulette Wheel Divisions</li>
+                <li>✅ Animation starts only after payment confirmation</li>
+                <li>✅ Improved Error Handling and User Feedback</li>
+              </ul>
+            </div>
             <div>
               <h3 className="text-lg font-bold mb-2 text-white/90">Version 1.1 (December 2025)</h3>
               <ul className="list-disc list-inside space-y-1 text-white/80 text-sm">
@@ -408,7 +669,7 @@ export const Whitepaper: React.FC = () => {
         </GlassCard>
 
         <div className="text-center text-white/50 text-sm py-6">
-          <p>Version 1.1 • Last Updated: December 2025 • Network: Arc Testnet</p>
+          <p>Version 1.2 • Last Updated: December 2025 • Network: Arc Testnet</p>
         </div>
       </div>
     </motion.div>
