@@ -109,6 +109,7 @@ const App: React.FC = () => {
   const [userBets, setUserBets] = useState<UserBet[]>([]);
   const [filterCategory, setFilterCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showClosedBets, setShowClosedBets] = useState<boolean>(false);
 
   // Auth State
   const [isConnectModalOpen, setConnectModalOpen] = useState(false);
@@ -310,9 +311,16 @@ const App: React.FC = () => {
       if (!isLoggedIn || !walletAddress) return;
 
       try {
-        // Load USDC balance
-        const balance = await getUSDCBalance(walletAddress);
-        const balanceNum = parseFloat(formatUSDC(balance));
+        // Load USDC balance with error handling
+        let balanceNum = 0;
+        try {
+          const balance = await getUSDCBalance(walletAddress);
+          balanceNum = parseFloat(formatUSDC(balance));
+        } catch (balanceError: any) {
+          console.warn('⚠️ Could not load USDC balance:', balanceError);
+          // If balance fails, continue with 0 balance
+          balanceNum = 0;
+        }
 
         // Load user bets
         const bets = await getAllUserBets(walletAddress);
@@ -807,6 +815,10 @@ const App: React.FC = () => {
   };
 
   const filteredScenarios = scenarios.filter(s => {
+    // Hide closed/resolved scenarios by default unless showClosedBets is true
+    if (!showClosedBets && (s.isClosed || s.isResolved)) {
+      return false;
+    }
       const matchesCategory = filterCategory === 'All' || s.category === filterCategory;
       const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
@@ -997,7 +1009,7 @@ const App: React.FC = () => {
                             </div>
 
                             {/* Filters */}
-                            <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                            <div className="flex flex-wrap gap-2 mb-6 items-center overflow-x-auto pb-2 scrollbar-hide">
                                 {CATEGORIES.map(cat => (
                                     <button 
                                         key={cat}
@@ -1007,6 +1019,19 @@ const App: React.FC = () => {
                                         {cat}
                                     </button>
                                 ))}
+                                
+                                {/* Toggle for closed bets */}
+                                <button
+                                    onClick={() => setShowClosedBets(!showClosedBets)}
+                                    className={`ml-auto px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                                        showClosedBets 
+                                            ? 'bg-white/10 text-white border border-white/20' 
+                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                    }`}
+                                >
+                                    <Filter size={14} />
+                                    {showClosedBets ? 'Hide Closed' : 'Show Closed'}
+                                </button>
                             </div>
 
                             {/* Grid */}
@@ -1060,15 +1085,22 @@ const App: React.FC = () => {
                             <ClaimableBets 
                                 bets={userBets} 
                                 scenarios={scenarios}
-                                onClaimSuccess={async () => {
+                                    onClaimSuccess={async () => {
                                     // Refresh data after claiming
                                     if (walletAddress) {
                                         const updatedBets = await getAllUserBets(walletAddress);
                                         setUserBets(updatedBets);
-                                        const balance = await getUSDCBalance(walletAddress);
+                                        let balanceNum = user.balance;
+                                        try {
+                                            const balance = await getUSDCBalance(walletAddress);
+                                            balanceNum = parseFloat(formatUSDC(balance));
+                                        } catch (balanceError: any) {
+                                            console.warn('⚠️ Could not load USDC balance after claim:', balanceError);
+                                            // Keep previous balance if error
+                                        }
                                         setUser(prev => ({
                                             ...prev,
-                                            balance: parseFloat(formatUSDC(balance)),
+                                            balance: balanceNum,
                                         }));
                                     }
                                 }}
