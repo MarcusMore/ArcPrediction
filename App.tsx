@@ -815,8 +815,12 @@ const App: React.FC = () => {
   };
 
   const filteredScenarios = scenarios.filter(s => {
-    // Hide closed/resolved scenarios by default unless showClosedBets is true
-    if (!showClosedBets && (s.isClosed || s.isResolved)) {
+    // Check if betting deadline has passed
+    const now = Math.floor(Date.now() / 1000);
+    const bettingDeadlinePassed = s.bettingDeadline ? s.bettingDeadline <= now : false;
+    
+    // Hide closed/resolved/finished scenarios by default unless showClosedBets is true
+    if (!showClosedBets && (s.isClosed || s.isResolved || bettingDeadlinePassed)) {
       return false;
     }
       const matchesCategory = filterCategory === 'All' || s.category === filterCategory;
@@ -1099,10 +1103,15 @@ const App: React.FC = () => {
                             </div>
                             <ClaimableBets 
                                 bets={userBets.filter(bet => {
-                                    // Filter closed/resolved bets based on showClosedBets toggle
+                                    // Filter closed/resolved/finished bets based on showClosedBets toggle
                                     const scenario = scenarios.find(s => s.id === bet.scenarioId);
-                                    if (!showClosedBets && scenario && (scenario.isClosed || scenario.isResolved)) {
-                                        return false;
+                                    if (scenario) {
+                                        const now = Math.floor(Date.now() / 1000);
+                                        const bettingDeadlinePassed = scenario.bettingDeadline ? scenario.bettingDeadline <= now : false;
+                                        
+                                        if (!showClosedBets && (scenario.isClosed || scenario.isResolved || bettingDeadlinePassed)) {
+                                            return false;
+                                        }
                                     }
                                     return true;
                                 })} 
@@ -1150,10 +1159,15 @@ const App: React.FC = () => {
                                             </thead>
                                             <tbody>
                                                 {userBets.filter(bet => {
-                                                    // Filter closed/resolved bets based on showClosedBets toggle
+                                                    // Filter closed/resolved/finished bets based on showClosedBets toggle
                                                     const scenario = scenarios.find(s => s.id === bet.scenarioId);
-                                                    if (!showClosedBets && scenario && (scenario.isClosed || scenario.isResolved)) {
-                                                        return false;
+                                                    if (scenario) {
+                                                        const now = Math.floor(Date.now() / 1000);
+                                                        const bettingDeadlinePassed = scenario.bettingDeadline ? scenario.bettingDeadline <= now : false;
+                                                        
+                                                        if (!showClosedBets && (scenario.isClosed || scenario.isResolved || bettingDeadlinePassed)) {
+                                                            return false;
+                                                        }
                                                     }
                                                     return true;
                                                 }).map((bet) => {
