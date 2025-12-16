@@ -106,7 +106,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
     };
 
     loadData();
-    const interval = setInterval(loadData, 10000); // Refresh every 10 seconds
+    const interval = setInterval(loadData, 15000); // Refresh every 15 seconds (less frequent)
     return () => clearInterval(interval);
   }, [contractNotSet, walletAddress]);
 
@@ -123,7 +123,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
     };
 
     loadBalance();
-    const interval = setInterval(loadBalance, 5000);
+    const interval = setInterval(loadBalance, 10000); // Refresh every 10 seconds (less frequent)
     return () => clearInterval(interval);
   }, [walletAddress]);
 
@@ -156,27 +156,21 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
       // Only start animation after payment is confirmed
       setIsSpinning(true);
       
-      // Wait for animation to complete (3 seconds)
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for animation to complete (2 seconds - faster)
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Show result after animation
       setLastResult({ prize: result.prizeWon, name: result.prizeName });
       setShowResult(true);
       setIsSpinning(false);
       
-      // Refresh data
-      const [pool, rouletteStats, spinStatus] = await Promise.all([
-        getPrizePool(),
-        getRouletteStats(),
-        walletAddress ? canUserSpin(walletAddress) : Promise.resolve({ canSpin: true, timeRemaining: 0 }),
-      ]);
-      setPrizePool(pool);
-      setStats(rouletteStats);
-      if (walletAddress) {
-        setCanSpin(spinStatus);
-        const bal = await getUSDCBalance(walletAddress);
-        setBalance(parseFloat(formatUSDC(bal)));
-      }
+      // Refresh data in parallel (non-blocking)
+      Promise.all([
+        getPrizePool().then(setPrizePool).catch(console.error),
+        getRouletteStats().then(setStats).catch(console.error),
+        walletAddress ? canUserSpin(walletAddress).then(setCanSpin).catch(console.error) : Promise.resolve(),
+        walletAddress ? getUSDCBalance(walletAddress).then(bal => setBalance(parseFloat(formatUSDC(bal)))).catch(console.error) : Promise.resolve(),
+      ]).catch(console.error);
     } catch (error: any) {
       console.error('Error spinning:', error);
       let errorMessage = 'Oops! Something went wrong while spinning the roulette.';
@@ -415,7 +409,7 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
                     rotate: isSpinning ? 3600 : 0,
                   }}
                   transition={{
-                    duration: isSpinning ? 3 : 0,
+                    duration: isSpinning ? 2 : 0,
                     ease: "easeOut",
                   }}
                   className="w-full h-full rounded-full border-8 border-primary/30 relative overflow-hidden"
