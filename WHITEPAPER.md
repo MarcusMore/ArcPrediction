@@ -12,16 +12,28 @@ Forsightt is a decentralized betting platform where users can participate in pre
 
 ### 1.2 Key Features
 
+**Betting Platform:**
 - **Decentralized**: Built on Arc Testnet with smart contract-based settlement
 - **Transparent**: All bets, outcomes, and payouts are recorded on-chain
 - **Zero Gas Fees**: Uses USDC as the native gas token on Arc Testnet
 - **Real-time Odds**: Dynamic pricing based on pool distribution
 - **Multi-Scenario Betting**: Users can participate in multiple concurrent scenarios
 - **Automatic Settlement**: Smart contracts handle resolution and distribution
+- **Closed Bets Filter**: Toggle to show/hide closed and resolved bets
 - **Gamification**: Achievement system with 30+ achievements and progress tracking
 - **Leaderboard**: Competitive rankings with privacy-protected addresses
 - **Portfolio Management**: Comprehensive tracking of bets, profits, and performance
 - **Admin Management**: Multi-admin support with role-based access control
+
+**Roulette Game:**
+- **Premium Roulette**: Spin to win prizes from a funded prize pool
+- **Weighted Probabilities**: Higher prizes have lower chances, with possibility of winning nothing
+- **Daily Spin Limit**: One free spin per day (24 hours)
+- **Extra Spin**: Pay 5 USDC to spin again before cooldown expires
+- **Admin Fee**: 10% of extra spin cost goes to admin, 90% to prize pool
+- **Smart Prize Tiers**: Prize tiers automatically deactivate when prize pool is insufficient
+- **Prize Pool Management**: When user wins "Nothing", spin cost goes to prize pool
+- **Prize Range**: From 1 USDC to 100 USDC maximum prize
 
 ## 2. Technical Architecture
 
@@ -32,9 +44,11 @@ Forsightt is a decentralized betting platform where users can participate in pre
 - **Native Token**: USDC (for gas fees)
 - **Token Standard**: ERC-20 (6 decimals for USDC interface)
 
-### 2.2 Smart Contract
+### 2.2 Smart Contracts
 
-The platform is powered by a single smart contract: `BettingPlatform.sol`
+The platform is powered by two main smart contracts:
+
+#### 2.2.1 BettingPlatform.sol
 
 **Key Components:**
 - Scenario management with custom deadlines
@@ -46,11 +60,25 @@ The platform is powered by a single smart contract: `BettingPlatform.sol`
 - Permanent owner protection
 - Bettor tracking and analytics
 
-### 2.3 Contract Address
+#### 2.2.2 Roulette.sol
 
-Current deployment: `0xDE4544a8bB8e764A66E5659dcbb5b1f60327b13f`
+**Key Components:**
+- Prize pool management
+- Weighted probability system for prize distribution
+- Daily spin cooldown enforcement
+- Extra spin payment system with admin fee
+- Automatic prize tier deactivation
+- Prize pool funding and withdrawal
+- Emergency pause functionality
+- Prize tier configuration management
 
-**Note:** Contract address may vary. Check `.env` file or deployment logs for the latest address.
+### 2.3 Contract Addresses
+
+**BettingPlatform:** Check `.env` file for `VITE_CONTRACT_ADDRESS`
+
+**Roulette:** Check `.env` file for `VITE_ROULETTE_CONTRACT_ADDRESS`
+
+**Note:** Contract addresses may vary. Check `.env` file or deployment logs for the latest addresses.
 
 ## 3. Betting Mechanics
 
@@ -327,7 +355,109 @@ If all bets are on one side:
 - **Emergency Resolve**: Mechanism for late resolutions
 - **Pause Functionality**: Can halt operations if issues arise
 
-## 10. Gamification & Social Features
+## 10. Roulette Game
+
+### 10.1 Overview
+
+The Roulette feature is a premium game where users can spin a wheel to win prizes from a funded prize pool. The system uses weighted probabilities where higher prizes have lower chances of winning.
+
+### 10.2 Prize Tiers
+
+The roulette features 9 prize tiers with weighted probabilities:
+
+| Prize | Amount (USDC) | Probability | Chance |
+|-------|---------------|-------------|--------|
+| Nothing | 0 | 3500 | 35% |
+| Small Prize | 1 | 2500 | 25% |
+| Tiny Prize | 2 | 1500 | 15% |
+| Medium Prize | 5 | 1000 | 10% |
+| Good Prize | 10 | 600 | 6% |
+| Great Prize | 20 | 400 | 4% |
+| Excellent Prize | 50 | 300 | 3% |
+| Epic Prize | 75 | 140 | 1.4% |
+| Legendary Prize | 100 | 60 | 0.6% |
+
+**Maximum Prize:** 100 USDC
+
+### 10.3 Spin Mechanics
+
+#### 10.3.1 Daily Spin Limit
+
+- **Free Spin**: One spin per day (24-hour cooldown)
+- **Cooldown**: Users must wait 24 hours between free spins
+- **Cost**: 1 USDC (configurable by admin)
+
+#### 10.3.2 Extra Spin
+
+- **Cost**: 5 USDC
+- **Availability**: Can be used anytime, bypasses daily cooldown
+- **Fee Distribution**:
+  - 10% (0.5 USDC) goes to admin
+  - 90% (4.5 USDC) goes to prize pool
+- **Unlimited**: No limit on number of extra spins
+
+### 10.4 Prize Pool Management
+
+#### 10.4.1 Funding
+
+- Admin/owner can fund the prize pool using `fundPrizePool()`
+- Prize pool must be funded before users can spin
+- Prize pool balance is publicly viewable
+
+#### 10.4.2 Prize Distribution
+
+- When user wins a prize: Prize amount is deducted from pool
+- When user wins "Nothing": Spin cost is added to prize pool
+- Prize pool must have sufficient funds for the prize tier
+
+#### 10.4.3 Smart Tier Deactivation
+
+- Prize tiers automatically deactivate when prize pool is insufficient
+- Only tiers that can be paid are included in probability calculations
+- "Nothing" tier is always available
+- Probabilities are recalculated based on available tiers
+
+### 10.5 Financial Model
+
+#### 10.5.1 Revenue Streams
+
+**Normal Spin:**
+- User pays: 1 USDC
+- Prize pool receives: 1 USDC (if user wins "Nothing")
+- Prize pool pays: Prize amount (if user wins prize)
+
+**Extra Spin:**
+- User pays: 5 USDC
+- Admin receives: 0.5 USDC (10%)
+- Prize pool receives: 4.5 USDC (90%)
+- Prize pool pays: Prize amount (if user wins prize)
+
+#### 10.5.2 Sustainability
+
+- Prize pool grows when users win "Nothing"
+- Extra spins contribute 90% to prize pool
+- Admin fee from extra spins provides revenue
+- Automatic tier deactivation prevents overpayment
+
+### 10.6 User Experience
+
+#### 10.6.1 Spinning Process
+
+1. **Check Availability**: User checks if they can spin (cooldown status)
+2. **View Prize Pool**: See current prize pool balance
+3. **View Available Tiers**: See which prize tiers are available
+4. **Spin**: Execute spin transaction
+5. **Result**: View prize won and update prize pool
+
+#### 10.6.2 Visual Feedback
+
+- Prize wheel animation
+- Real-time prize pool display
+- Available prize tiers with probabilities
+- Cooldown timer display
+- Statistics tracking (total spins, prizes won, total prize amount)
+
+## 11. Gamification & Social Features
 
 ### 10.1 Achievement System
 
@@ -379,9 +509,51 @@ Comprehensive tracking and analytics:
 - Claimable bets section
 - Performance metrics
 
-## 11. Roadmap
+## 12. User Interface Features
 
-### 11.1 Current Features (v1.0)
+### 12.1 Dashboard
+
+**Features:**
+- Scenario cards with real-time odds
+- Category filtering
+- Search functionality
+- Closed bets filter (toggle to show/hide)
+- Responsive grid layout
+- Real-time countdown timers
+
+### 12.2 Portfolio
+
+**Features:**
+- Performance metrics (profit, win rate, active capital)
+- Claimable bets section
+- Detailed bet history table
+- Closed bets filter (toggle to show/hide)
+- Real-time balance updates
+- Profit/loss tracking
+
+### 12.3 Roulette Panel
+
+**Features:**
+- Interactive prize wheel animation
+- Prize pool display
+- Available prize tiers with probabilities
+- Spin button with cooldown status
+- Extra spin option (5 USDC)
+- Statistics display
+- Funding panel (admin only)
+
+### 12.4 Error Handling
+
+**Features:**
+- Robust error handling for RPC rate limiting
+- Automatic retry with exponential backoff
+- Clear error messages for users
+- Graceful degradation when services are unavailable
+- Transaction status feedback
+
+## 13. Roadmap
+
+### 13.1 Current Features (v1.2)
 
 - ✅ Basic betting functionality
 - ✅ Scenario management
@@ -393,8 +565,14 @@ Comprehensive tracking and analytics:
 - ✅ Emergency resolve functionality
 - ✅ Permanent owner protection
 - ✅ Bettor analytics
+- ✅ Roulette game with prize tiers
+- ✅ Daily spin limit with extra spin option
+- ✅ Closed bets filter (dashboard & portfolio)
+- ✅ Smart prize tier deactivation
+- ✅ Admin fee on extra spins (10%)
+- ✅ Improved error handling and retry logic
 
-### 11.2 Future Enhancements
+### 13.2 Future Enhancements
 
 - 🔄 Oracle integration for automatic resolution
 - 🔄 Multi-signature admin controls
@@ -404,30 +582,44 @@ Comprehensive tracking and analytics:
 - 🔄 Social features (following, sharing)
 - 🔄 Custom achievement creation
 - 🔄 Tournament mode
+- 🔄 Additional roulette game modes
+- 🔄 NFT rewards for achievements
 
-## 12. Technical Specifications
+## 14. Technical Specifications
 
-### 11.1 Smart Contract
+### 14.1 Smart Contracts
 
+**BettingPlatform.sol:**
 - **Language**: Solidity 0.8.20
 - **Compiler**: Hardhat with optimizer
 - **Libraries**: OpenZeppelin Contracts v5.0.0
 - **Standards**: ERC-20 interface for USDC
 
-### 11.2 Frontend
+**Roulette.sol:**
+- **Language**: Solidity 0.8.20
+- **Compiler**: Hardhat with optimizer
+- **Libraries**: OpenZeppelin Contracts v5.0.0
+- **Standards**: ERC-20 interface for USDC/USDT
+- **Features**: Weighted probability system, cooldown management, prize tier management
+
+### 14.2 Frontend
 
 - **Framework**: React 19.2.1
 - **Build Tool**: Vite 6.2.0
 - **Web3 Library**: Ethers.js 6.13.0
 - **Styling**: Tailwind CSS with custom components
+- **Animations**: Framer Motion
+- **Charts**: Recharts
+- **Error Handling**: Automatic retry with exponential backoff
 
-### 11.3 Network Details
+### 14.3 Network Details
 
-- **RPC URL**: https://rpc.blockdaemon.testnet.arc.network
+- **RPC URL**: https://rpc.testnet.arc.network
 - **Explorer**: https://testnet.arcscan.app
 - **Faucet**: https://faucet.circle.com
+- **Chain ID**: 5042002 (0x4cef52)
 
-## 13. Security & Access Control
+## 15. Security & Access Control
 
 ### 13.1 Access Control System
 
@@ -468,41 +660,52 @@ Comprehensive tracking and analytics:
 - Transaction error handling
 - Privacy protection (leaderboard)
 
-## 14. Legal and Compliance
+## 16. Legal and Compliance
 
-### 12.1 Testnet Disclaimer
+### 16.1 Testnet Disclaimer
 
 Forsightt is currently deployed on Arc Testnet for testing purposes only. All tokens and transactions are on a test network and have no real-world value.
 
-### 12.2 Regulatory Notice
+### 16.2 Regulatory Notice
 
 Prediction markets may be subject to regulatory restrictions in certain jurisdictions. Users are responsible for compliance with local laws and regulations.
 
-### 12.3 No Warranty
+### 16.3 No Warranty
 
 The platform is provided "as is" without warranties. Users participate at their own risk.
 
-## 15. Contact and Resources
+## 17. Contact and Resources
 
-### 13.1 Documentation
+### 17.1 Documentation
 
 - **GitHub**: [Repository URL]
 - **Explorer**: https://testnet.arcscan.app
 - **Arc Network Docs**: https://docs.arc.network
 
-### 13.2 Support
+### 17.2 Support
 
 For issues, questions, or feedback, please contact the development team.
 
 ---
 
-**Version**: 1.1  
+**Version**: 1.2  
 **Last Updated**: December 2025  
 **Network**: Arc Testnet
 
 ---
 
 ## Changelog
+
+### Version 1.2 (December 2025)
+- ✅ Added Roulette Game with prize tiers (1-100 USDC)
+- ✅ Added Daily Spin Limit (24-hour cooldown)
+- ✅ Added Extra Spin feature (5 USDC, 10% admin fee)
+- ✅ Added Smart Prize Tier Deactivation
+- ✅ Added Closed Bets Filter (Dashboard & Portfolio)
+- ✅ Added Automatic Retry for RPC Rate Limiting
+- ✅ Improved Error Handling and User Feedback
+- ✅ Enhanced Prize Pool Management
+- ✅ Added Prize Pool Funding from "Nothing" wins
 
 ### Version 1.1 (December 2025)
 - ✅ Added Achievement System (30+ achievements)
