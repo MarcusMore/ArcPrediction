@@ -24,6 +24,23 @@ interface RoulettePanelProps {
   isAdmin?: boolean;
 }
 
+// Helper function to format time in seconds to readable format
+const formatTime = (seconds: number): string => {
+  if (seconds <= 0) return 'now';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
+};
+
 export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isAdmin = false }) => {
   const [prizePool, setPrizePool] = useState<number>(0);
   const [spinCost, setSpinCost] = useState<number>(0);
@@ -477,7 +494,9 @@ export const RoulettePanel: React.FC<RoulettePanelProps> = ({ walletAddress, isA
               {walletAddress && balance >= (canSpin.canSpin ? spinCost : extraSpinCost) && !canSpin.canSpin && canSpin.message && (
                 <div className="text-sm text-yellow-400 mt-4 max-w-md text-center space-y-1">
                   <p>{canSpin.message}</p>
-                  <p className="text-xs text-white/60">Or pay {extraSpinCost.toFixed(2)} USDC to spin again now</p>
+                  <p className="text-xs text-white/60">
+                    You can spin again for 1 USDC in {canSpin.timeRemaining > 0 ? formatTime(canSpin.timeRemaining) : 'now'}
+                  </p>
                 </div>
               )}
               {walletAddress && balance >= (canSpin.canSpin ? spinCost : extraSpinCost) && canSpin.canSpin && !rouletteReady.ready && rouletteReady.reason && (
